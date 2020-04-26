@@ -20,7 +20,7 @@ end
 Multi-variable Newton operator.
 """
 function 𝒩(f::Function, jacobian::Function, X::IntervalBox, α)  # multidimensional Newton operator
-    m = IntervalBox(Interval.(mid(X, α)))
+    m = Interval.(mid(X, α))
     J = jacobian(X)
 
     return IntervalBox(m .- (J \ f(m)))
