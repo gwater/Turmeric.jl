@@ -3,3 +3,4 @@ IntervalArithmetic 0.15
 ForwardDiff 0.8
 StaticArrays 0.8
 Polynomials
+LinearAlgebra

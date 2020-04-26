@@ -1,3 +1,5 @@
+using LinearAlgebra
+
 export Contractor
 export Bisection, Newton, Krawczyk
 
@@ -22,7 +24,9 @@ Multi-variable Newton operator.
 function 𝒩(f::Function, jacobian::Function, X::IntervalBox, α)  # multidimensional Newton operator
     m = Interval.(mid(X, α))
     J = jacobian(X)
-
+    if contains_zero(det(J))
+        return X .± ∞
+    end
     return IntervalBox(m .- (J \ f(m)))
 end
 
