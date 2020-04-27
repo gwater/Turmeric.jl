@@ -33,7 +33,7 @@ three_halves_pi = 3*big_pi/2
     for autodiff in (false, true)
         if autodiff
             rts1 = newton1d(sin, -5..5)
-            rts2 = newton1d(f, -∞..∞)
+            rts2 = newton1d(f, -Inf..Inf)
             rts3 = newton1d(f1, -10..10)
             rts4 = newton1d(f2, -10..11)
             rts5 = newton1d(f3, -10..10)
@@ -42,7 +42,7 @@ three_halves_pi = 3*big_pi/2
 
         else
             rts1 = newton1d(sin, cos, -5..5)
-            rts2 = newton1d(f, f′, -∞..∞)
+            rts2 = newton1d(f, f′, -Inf..Inf)
             rts3 = newton1d(f1, f1′, -10..10)
             rts4 = newton1d(f2, f2′, -10..11)
             rts5 = newton1d(f3, f3′, -10..10)

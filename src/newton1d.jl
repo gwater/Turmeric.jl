@@ -1,3 +1,5 @@
+import IntervalArithmetic: emptyinterval, wideinterval
+
 """`newton1d` performs the interval Newton method on the given function `f`
 with its derivative `f′` and initial interval `x`.
 Optional keyword arguments give the tolerances `reltol` and `abstol`.
@@ -12,7 +14,7 @@ function newton1d(f::Function, f′::Function, x::T;
     reps = reps1 = 0
 
     push!(L, x) # Initialize
-    initial_width = ∞
+    initial_width = Inf
     X = emptyinterval(T) # Initialize
     while !isempty(L)   # Until all intervals have been processed
         X = pop!(L)     # Process next interval
@@ -158,8 +160,7 @@ function newton1d(f::Function, f′::Function, x::T;
                 expansion_pt = mid(X)
             end
 
-
-            a = f(interval(expansion_pt))
+            a = f(convert(T, expansion_pt))
             b = f′(X)
             # Newton steps with extended division creating two intervals
             if 0 < b.hi && 0 > b.lo && 0 ∉ a
@@ -176,7 +177,7 @@ function newton1d(f::Function, f′::Function, x::T;
                 continue
 
             else
-                N = expansion_pt - (f(interval(expansion_pt))/f′(X))
+                N = expansion_pt - (f(convert(T, expansion_pt))/f′(X))
 
                 debug && (print("Newton step2: "); @show (X, X ∩ N))
 
