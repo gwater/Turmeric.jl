@@ -25,10 +25,11 @@ Multi-variable Newton operator.
 function 𝒩(f::Function, jacobian::Function, X::AbstractVector{T}, α) where T # multidimensional Newton operator
     m = T.(mid.(X, α))
     J = jacobian(X)
-    if in(0, det(J))
+    try
+        return convert(typeof(X), m .- (J \ f(m)))
+    catch
         return X .± Inf
     end
-    return convert(typeof(X), m .- (J \ f(m)))
 end
 
 """
