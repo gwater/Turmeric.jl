@@ -1,43 +1,27 @@
 # This file is part of the ValidatedNumerics.jl package; MIT licensed
 
-__precompile__(true)
+module IntervalRootFinding2
 
-module IntervalRootFinding
-
-using IntervalArithmetic
 using ForwardDiff
 using StaticArrays
 
 using LinearAlgebra: I, Diagonal
 
-
 import Base: ⊆, show, big, \
-
-import Polynomials: roots
 
 ## Root finding
 export
     derivative, jacobian,  # reexport derivative from ForwardDiff
     Root, is_unique,
     roots, find_roots,
-    bisect, newton1d, quadratic_roots,
-    gauss_seidel_interval, gauss_seidel_interval!,
-    gauss_seidel_contractor, gauss_seidel_contractor!,
-    gauss_elimination_interval, gauss_elimination_interval!,
-    slope
+    bisect
 
 export isunique, root_status
-
-
-import IntervalArithmetic: interval, wideinterval
-
-
 
 const derivative = ForwardDiff.derivative
 const D = derivative
 
-const where_bisect = IntervalArithmetic.where_bisect ## 127//256
-
+import IntervalArithmetic: where_bisect
 
 include("root_object.jl")
 
@@ -48,57 +32,29 @@ include("complex.jl")
 include("contractors.jl")
 include("branch_and_bound.jl")
 include("roots.jl")
-include("newton1d.jl")
-include("quadratic.jl")
-include("linear_eq.jl")
-include("slopes.jl")
-
 
 gradient(f) = X -> ForwardDiff.gradient(f, X[:])
-
-ForwardDiff.jacobian(f, X::IntervalBox) = ForwardDiff.jacobian(f, X.v)
 
 const ∇ = gradient
 
 export ∇
 
-
-
-
-function find_roots(f::Function, a::Interval{T}, method::Function = newton;
+function find_roots(f::Function, a::T, method::Function = newton;
                     tolerance = eps(T), debug = false, maxlevel = 30) where {T}
 
     method(f, a; tolerance=tolerance, debug=debug, maxlevel=maxlevel)
 end
 
-function find_roots(f::Function, f_prime::Function, a::Interval{T}, method::Function=newton;
+function find_roots(f::Function, f_prime::Function, a::T, method::Function=newton;
                     tolerance=eps(T), debug=false, maxlevel=30) where {T}
 
     method(f, f_prime, a; tolerance=tolerance, debug=debug, maxlevel=maxlevel)
 end
 
-function find_roots(f::Function, a::Real, b::Real, method::Function=newton;
-           tolerance=eps(1.0*a), debug=false, maxlevel=30, precision::Int=-1)
-
-    if precision >= 0
-        setprecision(Interval, precision) do
-            find_roots(f, @interval(a, b), method; tolerance=tolerance, debug=debug, maxlevel=maxlevel)
-        end
-
-
-    else  # use current precision
-
-        find_roots(f, @interval(a, b), method; tolerance=tolerance, debug=debug, maxlevel=maxlevel)
-
-    end
-end
-
-
-
-function find_roots_midpoint(f::Function, a::Real, b::Real, method::Function=newton;
+function find_roots_midpoint(f::Function, region, method::Function=newton;
            tolerance=eps(1.0*a), debug=false, maxlevel=30, precision=-1)
 
-    roots = find_roots(f, a, b, method; tolerance=tolerance, debug=debug, maxlevel=maxlevel, precision=precision)
+    roots = find_roots(f, region, method; tolerance=tolerance, debug=debug, maxlevel=maxlevel, precision=precision)
 
     T = eltype(roots[1].interval)
 

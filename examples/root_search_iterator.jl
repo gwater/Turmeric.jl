@@ -1,5 +1,5 @@
 using IntervalArithmetic
-using IntervalRootFinding
+using IntervalRootFinding2
 
 ##
 # Available strategies
@@ -44,7 +44,7 @@ println(endtree)
 
 # Define custom BBSearch that store empty intervals rather than discarding it
 # Functions of the interface must be explicitely imported
-import IntervalRootFinding
+import IntervalRootFinding2
 
 struct MySearch{R <: Region, C <: Contractor, T <: Real} <: BreadthFirstBBSearch{Root{R}}
     initial::Root{R}
@@ -55,7 +55,7 @@ end
 # This must be implemented, other functions needed are already implemented for
 # BBSearch using Root as data (bisect function) or the general fallback match
 # this case (root_element function)
-function IntervalRootFinding.process(search::MySearch, r::Root)
+function IntervalRootFinding2.process(search::MySearch, r::Root)
     contracted_root = search.contractor(r, search.tol)
     status = root_status(contracted_root)
 

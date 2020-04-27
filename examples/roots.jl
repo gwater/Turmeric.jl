@@ -1,4 +1,4 @@
-using IntervalArithmetic, IntervalRootFinding, StaticArrays
+using IntervalArithmetic, IntervalRootFinding2, StaticArrays
 
 rts = roots(sin, -5..5)
 

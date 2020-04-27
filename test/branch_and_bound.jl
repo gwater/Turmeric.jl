@@ -1,8 +1,8 @@
-import IntervalRootFinding: BBLeaf, BBNode, BBTree
-import IntervalRootFinding: root, nnodes, data, newid, discard_leaf!
+import IntervalRootFinding2: BBLeaf, BBNode, BBTree
+import IntervalRootFinding2: root, nnodes, data, newid, discard_leaf!
 
-import IntervalRootFinding: BreadthFirstBBSearch
-import IntervalRootFinding: process, bisect
+import IntervalRootFinding2: BreadthFirstBBSearch
+import IntervalRootFinding2: process, bisect
 
 @testset "Branch and bound tree" begin
     #= Manually create a simple tree with the following structure

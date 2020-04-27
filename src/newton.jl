@@ -4,7 +4,7 @@
 
 """If a root is known to be inside an interval,
 `newton_refine` iterates the interval Newton method until that root is found."""
-function newton_refine(f::Function, f_prime::Function, X::Union{Interval{T}, IntervalBox{N,T}};
+function newton_refine(f::Function, f_prime::Function, X;
                           tolerance=eps(T), debug=false) where {N,T}
 
     debug && (print("Entering newton_refine:"); @show X)
@@ -32,7 +32,7 @@ end
 with its optional derivative `f_prime` and initial interval `x`.
 Optional keyword arguments give the `tolerance`, `maxlevel` at which to stop
 subdividing, and a `debug` boolean argument that prints out diagnostic information."""
-function newton(f::Function, f_prime::Function, x::Interval{T}, level::Int=0;
+function newton(f::Function, f_prime::Function, x, level::Int=0;
                    tolerance=eps(T), debug=false, maxlevel=30) where {T}
 
     debug && (print("Entering newton:"); @show(level); @show(x))
@@ -64,10 +64,11 @@ function newton(f::Function, f_prime::Function, x::Interval{T}, level::Int=0;
         debug && @show(x,m)
 
         # bisect:
+        a, b = bisect(x, 0.5)
         roots = vcat(
-            newton(f, f_prime, Interval(x.lo, m), level+1,
+            newton(f, f_prime, a, level+1,
                    tolerance=tolerance, debug=debug, maxlevel=maxlevel),
-            newton(f, f_prime, Interval(m, x.hi), level+1,
+            newton(f, f_prime, b, level+1,
                    tolerance=tolerance, debug=debug, maxlevel=maxlevel)
             # note the nextfloat here to prevent repetition
             )
@@ -76,8 +77,8 @@ function newton(f::Function, f_prime::Function, x::Interval{T}, level::Int=0;
 
     else  # 0 in deriv; this does extended interval division by hand
 
-        y1 = Interval(deriv.lo, -z)
-        y2 = Interval(z, deriv.hi)
+        y1 = min(deriv, -z)
+        y1 = max(deriv, z)
 
         if debug
             @show (y1, y2)
@@ -109,14 +110,13 @@ end
 
 
 # use automatic differentiation if no derivative function given:
-newton(f::Function, x::Interval{T};  args...) where {T} =
-    newton(f, x->D(f,x), x; args...)
+newton(f::Function, x;  args...) = newton(f, x->D(f,x), x; args...)
 
 # newton for vector of intervals:
-newton(f::Function, f_prime::Function, xx::Vector{Interval{T}}; args...) where {T} =
-    vcat([newton(f, f_prime, @interval(x); args...) for x in xx]...)
+newton(f::Function, f_prime::Function, xx::AbstractVector; args...) =
+    vcat([newton(f, f_prime, x; args...) for x in xx]...)
 
-newton(f::Function,  xx::Vector{Interval{T}}, level; args...) where {T} =
+newton(f::Function,  xx::AbstractVector, level; args...) =
     newton(f, x->D(f,x), xx, 0, args...)
 
 newton(f::Function,  xx::Vector{Root{T}}; args...) where {T} =

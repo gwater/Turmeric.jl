@@ -1,0 +1,23 @@
+name = "IntervalRootFinding2"
+uuid = "bc8ceb21-a8fe-4071-b36a-0b0ea65b9c09"
+version = "0.6.0"
+
+[deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+ForwardDiff = "0.10"
+IntervalArithmetic = "0.15, 0.16, 0.17"
+StaticArrays = "0.11, 0.12"
+julia = "1"
+NumberIntervals = "0.2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+NumberIntervals = "978898f6-561e-11e9-3f66-13949d9e5c8a"
+
+[targets]
+test = ["Test", "NumberIntervals"]

@@ -1,9 +1,13 @@
-using IntervalArithmetic
-using IntervalRootFinding
+using NumberIntervals
+using IntervalRootFinding2
 
 @testset "Root search iterator interface" begin
     contractor = Newton(sin, cos)
-    search = BreadthFirstSearch(-10..10, contractor, 1e-3)
+    search = BreadthFirstSearch(
+        NumberInterval(-10, 10),
+        contractor,
+        1e-3
+    )
 
     # First iteration of the search
     elem, state = iterate(search)
@@ -15,7 +19,7 @@ end
 
 @testset "Search strategies" begin
     # DepthFristSearch and BreadthFristSearch should return the same results
-    X = -5..5
+    X = NumberInterval(-5, 5)
     rts = roots(sin, cos, X, Newton, DepthFirstSearch)
     @test Set(rts) == Set(roots(sin, cos, X, Newton, BreadthFirstSearch))
 end
