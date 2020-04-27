@@ -4,8 +4,8 @@ using .SmileyExample22, .SmileyExample52, .SmileyExample54, .SmileyExample55
 using BenchmarkTools
 using ForwardDiff
 using IntervalArithmetic
-using IntervalRootFinding
-
+using IntervalRootFinding2
+using StaticArrays
 import Random
 
 const SUITE = BenchmarkGroup()
@@ -23,7 +23,6 @@ for example in (SmileyExample22, SmileyExample52, SmileyExample54) #, SmileyExam
     end
 end
 
-
 S = SUITE["Rastigrin stationary points"] = BenchmarkGroup()
 
 # Rastrigin function:
@@ -36,27 +35,11 @@ ForwardDiff.gradient(f, X::IntervalBox) = ForwardDiff.gradient(f, X.v)
 ∇f = X -> ForwardDiff.gradient(f, X)
 
 L = 5.0
-X = IntervalBox(-L..(L+1), 2)
+X = SVector(-L..(L+1), -L..(L+1))
 
 for method in (Newton, Krawczyk)
     S[string(method)] = @benchmarkable roots($(∇(f)), $X, $method, 1e-5)
 end
-
-
-S = SUITE["Linear equations"] = BenchmarkGroup()
-
-sizes = (2, 5, 10)
-
-for n in sizes
-    s = S["n = $n"] = BenchmarkGroup()
-    A = Interval.(randn(n, n))
-    b = Interval.(randn(n))
-
-    s["Gauss seidel"] = @benchmarkable gauss_seidel_interval($A, $b)
-    s["Gauss seidel contractor"] = @benchmarkable gauss_seidel_contractor($A, $b)
-    s["Gauss elimination"] = @benchmarkable gauss_elimination_interval($A, $b)
-end
-
 
 S = SUITE["Dietmar-Ratz"] = BenchmarkGroup()
 X = Interval(0.75, 1.75)
@@ -71,5 +54,4 @@ for (k, dr) in enumerate(dr_functions)
     end
 
     s["Automatic differentiation"] = @benchmarkable ForwardDiff.derivative($dr, $X)
-    s["Slope expansion"] = @benchmarkable slope($dr, $X, $(mid(X)))
 end
