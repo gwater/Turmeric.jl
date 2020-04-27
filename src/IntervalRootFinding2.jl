@@ -1,6 +1,6 @@
 # This file is part of the ValidatedNumerics.jl package; MIT licensed
 
-module IntervalRootFinding
+module IntervalRootFinding2
 
 using ForwardDiff
 using StaticArrays

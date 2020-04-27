@@ -1,4 +1,4 @@
-using IntervalRootFinding
+using IntervalRootFinding2
 using Test
 
 include("branch_and_bound.jl")

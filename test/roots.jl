@@ -1,8 +1,8 @@
 
-using NumberIntervals, IntervalRootFinding, StaticArrays, ForwardDiff
+using NumberIntervals, IntervalRootFinding2, StaticArrays, ForwardDiff
 using Test
 
-import IntervalRootFinding: interval
+import IntervalRootFinding2: interval
 
 function all_unique(rts)
     all(root_status.(rts) .== :unique)

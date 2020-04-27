@@ -1,7 +1,7 @@
 include("../examples/smiley_examples.jl")
 
 using Test
-using NumberIntervals, IntervalRootFinding
+using NumberIntervals, IntervalRootFinding2
 using .SmileyExample22, .SmileyExample52, .SmileyExample54, .SmileyExample55
 
 function test_all_unique(xs)

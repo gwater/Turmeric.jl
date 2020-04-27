@@ -1,5 +1,5 @@
 using NumberIntervals
-using IntervalRootFinding
+using IntervalRootFinding2
 
 @testset "Root search iterator interface" begin
     contractor = Newton(sin, cos)
