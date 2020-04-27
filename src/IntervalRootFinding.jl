@@ -14,7 +14,7 @@ export
     derivative, jacobian,  # reexport derivative from ForwardDiff
     Root, is_unique,
     roots, find_roots,
-    bisect, newton1d
+    bisect
 
 export isunique, root_status
 
