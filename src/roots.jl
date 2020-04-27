@@ -1,12 +1,28 @@
 
-import IntervalArithmetic: diam, isinterior, bisect, isnan
+import Base: isnan
+import IntervalArithmetic: diam, bisect, isinterior
 
 export branch_and_prune, Bisection, Newton
 export BreadthFirstSearch, DepthFirstSearch
 
-diam(r::Root) = diam(interval(r))
-isnan(X::IntervalBox) = any(isnan.(X))
-isnan(r::Root) = isnan(interval(r))
+diam(r::Root) = maximum(diam.(interval(r)))
+isnan(r::Root) = any(isnan.(interval(r)))
+
+function bisect(X::AbstractVector, α=where_bisect)
+    i = argmax(diam.(X))  # find longest side
+
+    return bisect(X, i, α)
+end
+
+function bisect(X::AbstractVector, i::Integer, α=where_bisect)
+
+    x1, x2 = bisect(X[i], α)
+
+    X1 = setindex(X, x1, i)
+    X2 = setindex(X, x2, i)
+
+    return (X1, X2)
+end
 
 """
     BreadthFirstSearch <: BreadthFirstBBSearch
@@ -18,7 +34,7 @@ Type implementing  the `BreadthFirstBBSearch` interface for interval roots findi
   - `contractor`: contractor to use (`Bisection`, `Newton` or `Krawczyk`)
   - `tol`: tolerance of the search
 """
-struct BreadthFirstSearch{R <: Region, C <: Contractor, T <: Real} <: BreadthFirstBBSearch{Root{R}}
+struct BreadthFirstSearch{R, C <: Contractor, T <: Real} <: BreadthFirstBBSearch{Root{R}}
     initial::Root{R}
     contractor::C
     tol::T
@@ -34,16 +50,16 @@ Type implementing the `DepthFirstBBSearch` interface for interval roots finding.
   - `contractor`: contractor to use (`Bisection`, `Newton` or `Krawczyk`)
   - `tol`: tolerance of the search
 """
-struct DepthFirstSearch{R <: Region, C <: Contractor, T <: Real} <: DepthFirstBBSearch{Root{R}}
+struct DepthFirstSearch{R, C <: Contractor, T <: Real} <: DepthFirstBBSearch{Root{R}}
     initial::Root{R}
     contractor::C
     tol::T
 end
 
-BreadthFirstSearch(X::Region, C::Contractor, tol::Real) = BreadthFirstSearch(Root(X, :unknown), C, tol)
-DepthFirstSearch(X::Region, C::Contractor, tol::Real) = DepthFirstSearch(Root(X, :unknown), C, tol)
+BreadthFirstSearch(X, C::Contractor, tol::Real) = BreadthFirstSearch(Root(X, :unknown), C, tol)
+DepthFirstSearch(X, C::Contractor, tol::Real) = DepthFirstSearch(Root(X, :unknown), C, tol)
 
-root_element(search::BBSearch{Root{R}}) where {R <: Region} = search.initial
+root_element(search::BBSearch{Root{R}}) where {R} = search.initial
 
 function bisect(r::Root)
     Y1, Y2 = bisect(interval(r))
@@ -156,43 +172,43 @@ end
 
 
 # For `NewtonLike` acting on `Interval`
-function _roots(f, r::Root{Interval{T}}, contractor::NewtonLike,
-               strategy::Type{S}, tol::Float64) where {T, S <: BBSearch}
+function _roots(f, r::Root{T}, contractor::NewtonLike,
+               strategy::Type{S}, tol::Float64) where {T <: Real, S <: BBSearch}
 
     deriv = x -> ForwardDiff.derivative(f, x)
     _roots(f, deriv, r, contractor, strategy, tol)
 end
 
-function _roots(f, deriv, r::Root{Interval{T}}, contractor::NewtonLike,
-               strategy::Type{S}, tol::Float64) where {T, S <: BBSearch}
+function _roots(f, deriv, r::Root{T}, contractor::NewtonLike,
+               strategy::Type{S}, tol::Float64) where {T <: Real, S <: BBSearch}
 
     branch_and_prune(r, contractor(f, deriv), strategy, tol)
 end
 
 
 # For `NewtonLike` acting on `IntervalBox`
-function _roots(f, r::Root{IntervalBox{N, T}}, contractor::NewtonLike,
-               strategy::Type{S}, tol::Float64) where {N, T, S <: BBSearch}
+function _roots(f, r::Root{T}, contractor::NewtonLike,
+               strategy::Type{S}, tol::Float64) where {N, T <: AbstractVector, S <: BBSearch}
 
     deriv = x -> ForwardDiff.jacobian(f, x)
     _roots(f, deriv, r, contractor, strategy, tol)
 end
 
-function _roots(f, deriv, r::Root{IntervalBox{N, T}}, contractor::NewtonLike,
-               strategy::Type{S}, tol::Float64) where {N, T, S <: BBSearch}
+function _roots(f, deriv, r::Root{T}, contractor::NewtonLike,
+               strategy::Type{S}, tol::Float64) where {N, T <: AbstractVector, S <: BBSearch}
 
     branch_and_prune(r, contractor(f, deriv), strategy, tol)
 end
 
 
 # Acting on `Interval`
-function _roots(f, X::Region, contractor::Type{C},
+function _roots(f, X, contractor::Type{C},
                strategy::Type{S}, tol::Float64) where {C <: Contractor, S <: BBSearch}
 
     _roots(f, Root(X, :unknown), contractor, strategy, tol)
 end
 
-function _roots(f, deriv, X::Region, contractor::Type{C},
+function _roots(f, deriv, X, contractor::Type{C},
                strategy::Type{S}, tol::Float64) where {C <: Contractor, S <: BBSearch}
 
     _roots(f, deriv, Root(X, :unknown), contractor, strategy, tol)
@@ -214,33 +230,33 @@ end
 
 
 # Acting on complex `Interval`
-function _roots(f, Xc::Complex{Interval{T}}, contractor::Type{C},
+function _roots(f, Xc::Complex, contractor::Type{C},
                strategy::Type{S}, tol::Float64) where {T, C <: Contractor, S <: BBSearch}
 
     g = realify(f)
-    Y = IntervalBox(reim(Xc)...)
+    Y = SVector(reim(Xc)...)
     rts = _roots(g, Root(Y, :unknown), contractor, strategy, tol)
 
     return [Root(Complex(root.interval...), root.status) for root in rts]
 end
 
-function _roots(f, Xc::Complex{Interval{T}}, contractor::NewtonLike,
+function _roots(f, Xc::Complex, contractor::NewtonLike,
                strategy::Type{S}, tol::Float64) where {T, S <: BBSearch}
 
     g = realify(f)
     g_prime = x -> ForwardDiff.jacobian(g, x)
-    Y = IntervalBox(reim(Xc)...)
+    Y = SVector(reim(Xc)...)
     rts = _roots(g, g_prime, Root(Y, :unknown), contractor, strategy, tol)
 
     return [Root(Complex(root.interval...), root.status) for root in rts]
 end
 
-function _roots(f, deriv, Xc::Complex{Interval{T}}, contractor::NewtonLike,
+function _roots(f, deriv, Xc::Complex, contractor::NewtonLike,
                strategy::Type{S}, tol::Float64) where {T, S <: BBSearch}
 
     g = realify(f)
     g_prime = realify_derivative(deriv)
-    Y = IntervalBox(reim(Xc)...)
+    Y = SVector(reim(Xc)...)
     rts = _roots(g, g_prime, Root(Y, :unknown), contractor, strategy, tol)
 
     return [Root(Complex(root.interval...), root.status) for root in rts]

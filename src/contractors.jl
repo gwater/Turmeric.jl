@@ -1,5 +1,7 @@
 using LinearAlgebra
 
+import IntervalArithmetic: mid, ±
+
 export Contractor
 export Bisection, Newton, Krawczyk
 
@@ -10,9 +12,8 @@ Single-variable Newton operator.
 
 The symbol for the operator is accessed with `\\scrN<tab>`.
 """
-function 𝒩(f, f′, X::Interval{T}, α) where {T}
-    m = Interval(mid(X, α))
-
+function 𝒩(f, f′, X::T, α) where {T}
+    m = convert(T, mid(X, α))
     return m - (f(m) / f′(X))
 end
 
@@ -21,13 +22,13 @@ end
 
 Multi-variable Newton operator.
 """
-function 𝒩(f::Function, jacobian::Function, X::IntervalBox, α)  # multidimensional Newton operator
-    m = Interval.(mid(X, α))
+function 𝒩(f::Function, jacobian::Function, X::AbstractVector{T}, α) where T # multidimensional Newton operator
+    m = T.(mid.(X, α))
     J = jacobian(X)
-    if contains_zero(det(J))
-        return X .± ∞
+    if in(0, det(J))
+        return X .± Inf
     end
-    return IntervalBox(m .- (J \ f(m)))
+    return convert(typeof(X), m .- (J \ f(m)))
 end
 
 """
@@ -37,8 +38,8 @@ Single-variable Krawczyk operator.
 
 The symbol for the operator is accessed with `\\scrK<tab>`.
 """
-function 𝒦(f, f′, X::Interval{T}, α) where {T}
-    m = Interval(mid(X, α))
+function 𝒦(f, f′, X::T, α) where T
+    m = convert(T, mid(X, α))
     Y = 1 / f′(m)
 
     return m - Y*f(m) + (1 - Y*f′(X)) * (X - m)
@@ -49,13 +50,13 @@ end
 
 Multi-variable Krawczyk operator.
 """
-function 𝒦(f, jacobian, X::IntervalBox{T}, α) where {T}
-    m = mid(X, α)
-    mm = IntervalBox(m)
+function 𝒦(f, jacobian, X::AbstractVector, α)
+    m = mid.(X, α)
+    mm = convert(typeof(X), m)
     J = jacobian(X)
     Y = mid.(inv(jacobian(mm)))
 
-    return m - Y*f(mm) + (I - Y*J) * (X.v - m)
+    return m - Y*f(mm) + (I - Y*J) * (X - m)
 end
 
 
@@ -79,7 +80,7 @@ function (contractor::Bisection)(r, tol)
     X = interval(r)
     image = (contractor.f)(X)
 
-    if root_status(r) == :empty || !(contains_zero(image))
+    if root_status(r) == :empty || !all(0 .∈ image)
         return Root(X, :empty)
     end
 
@@ -148,24 +149,24 @@ function determine_region_status(op, f, R)
 
     imX = f(X)
 
-    if former_status == :empty || !(contains_zero(imX))
+    if former_status == :empty || !all(0 .∈ imX)
         return Root(X, :empty)
     end
 
-    safe_isempty(imX) && return Root(X, :empty)  # X is fully outside of the domain of f
+    any(isempty.(imX)) && return Root(X, :empty)  # X is fully outside of the domain of f
 
     contracted_X = op(X)
 
     # Only happens if X is partially out of the domain of f
-    safe_isempty(contracted_X) && return Root(X, :unknown)  # force bisection
+    any(isempty.(contracted_X)) && return Root(X, :unknown)  # force bisection
 
     # given that have the Jacobian, can also do mean value form
-    NX = contracted_X ∩ X
+    NX = contracted_X .∩ X
 
-    isinf(X) && return Root(NX, :unknown)  # force bisection
-    safe_isempty(NX) && return Root(X, :empty)
+    any(isinf.(X)) && return Root(NX, :unknown)  # force bisection
+    any(isempty.(NX)) && return Root(X, :empty)
 
-    if former_status == :unique || NX ⪽ X  # isinterior; know there's a unique root inside
+    if former_status == :unique || all(isinterior.(NX, X))  # isinterior; know there's a unique root inside
         return Root(NX, :unique)
     end
 
@@ -173,15 +174,15 @@ function determine_region_status(op, f, R)
 end
 
 """
-    refine(op, X::Region, tol)
+    refine(op, X, tol)
 
 Generic refine operation for Krawczyk and Newton.
 This function assumes that it is already known that `X` contains a unique root.
 """
-function refine(op, X::Region, tol)
-    while diam(X) > tol  # avoid problem with tiny floating-point numbers if 0 is a root
-        NX = op(X) ∩ X
-        NX == X && break  # reached limit of precision
+function refine(op, X, tol)
+    while maximum(diam.(X)) > tol  # avoid problem with tiny floating-point numbers if 0 is a root
+        NX = op(X) .∩ X
+        all(NX .=== X) && break  # reached limit of precision
         X = NX
     end
 

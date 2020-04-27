@@ -46,7 +46,7 @@ isunique(rt::Root{T}) where {T} = (rt.status == :unique)
 
 show(io::IO, rt::Root) = print(io, "Root($(rt.interval), :$(rt.status))")
 
-⊆(a::Interval, b::Root) = a ⊆ b.interval   # the Root object has the interval in the first entry
+⊆(a, b::Root) = a ⊆ b.interval   # the Root object has the interval in the first entry
 ⊆(a::Root, b::Root) = a.interval ⊆ b.interval
 
 big(a::Root) = Root(big(a.interval), a.status)

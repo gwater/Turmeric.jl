@@ -7,18 +7,18 @@
 """Returns two intervals, the first being a point within the
 interval x such that the interval corresponding to the derivative of f there
 does not contain zero, and the second is the inverse of its derivative"""
-function guarded_derivative_midpoint(f::Function, f_prime::Function, x::Interval{T}) where {T}
+function guarded_derivative_midpoint(f::Function, f_prime::Function, x::T) where T
 
-    α = convert(T, 0.46875)   # close to 0.5, but exactly representable as a floating point
+    α = convert(T, 0.46875)  # close to 0.5, but exactly representable as a floating point
 
-    m = Interval(mid(x))
+    m = convert(T, mid(x))
 
     C = inv(f_prime(m))
 
     # Check that 0 is not in C; if so, consider another point rather than m
     i = 0
     while zero(T) ∈ C || isempty(C)
-        m = Interval( α*x.lo + (one(T)-α)*x.hi )
+        m = α*x.lo + (one(T)-α)*x.hi
         C = inv(f_prime(m))
 
         i += 1
@@ -31,16 +31,16 @@ function guarded_derivative_midpoint(f::Function, f_prime::Function, x::Interval
 end
 
 
-function K(f::Function, f_prime::Function, x::Interval{T}) where {T}
+function K(f::Function, f_prime::Function, x)
     m, C = guarded_derivative_midpoint(f, f_prime, x)
     deriv = f_prime(x)
-    Kx = m - C*f(m) + (one(T) - C*deriv) * (x - m)
+    Kx = m - C*f(m) + (1 - C*deriv) * (x - m)
     Kx
 end
 
 
-function krawczyk_refine(f::Function, f_prime::Function, x::Interval{T};
-    tolerance=eps(one(T)), debug=false) where {T}
+function krawczyk_refine(f::Function, f_prime::Function, x::T;
+    tolerance=eps(one(T)), debug=false) where T
 
     debug && (print("Entering krawczyk_refine:"); @show x)
 
@@ -56,9 +56,7 @@ function krawczyk_refine(f::Function, f_prime::Function, x::Interval{T};
 end
 
 
-
-
-function krawczyk(f::Function, f_prime::Function, x::Interval{T}, level::Int=0;
+function krawczyk(f::Function, f_prime::Function, x::T, level::Int=0;
     tolerance=eps(one(T)), debug=false, maxlevel=30) where {T}
 
     debug && (print("Entering krawczyk:"); @show(level); @show(x))
@@ -82,14 +80,14 @@ function krawczyk(f::Function, f_prime::Function, x::Interval{T}, level::Int=0;
 
     isthin(x) && return [Root(x, :unknown)]
 
+    a, b = bisect(x, 0.5)
     # bisecting
     roots = vcat(
-        krawczyk(f, f_prime, Interval(x.lo, m), level+1,
+        krawczyk(f, f_prime, a, level+1,
                  tolerance=tolerance, debug=debug, maxlevel=maxlevel),
-        krawczyk(f, f_prime, Interval(m, x.hi), level+1,
+        krawczyk(f, f_prime, b, level+1,
                  tolerance=tolerance, debug=debug, maxlevel=maxlevel)
         )
-
 
     roots = clean_roots(f, roots)
 
@@ -98,15 +96,14 @@ end
 
 
 # use automatic differentiation if no derivative function given
-krawczyk(f::Function,x::Interval{T}; args...) where {T} =
-    krawczyk(f, x->D(f,x), x; args...)
+krawczyk(f::Function, x; args...) = krawczyk(f, x->D(f,x), x; args...)
 
 # krawczyk for vector of intervals:
-krawczyk(f::Function, f_prime::Function, xx::Vector{Interval{T}}; args...) where {T} =
-    vcat([krawczyk(f, f_prime, @interval(x); args...) for x in xx]...)
+krawczyk(f::Function, f_prime::Function, xx::AbstractVector; args...) =
+    vcat([krawczyk(f, f_prime, x; args...) for x in xx]...)
 
-krawczyk(f::Function,  xx::Vector{Interval{T}}, level; args...) where {T} =
+krawczyk(f::Function,  xx::AbstractVector, level; args...) =
     krawczyk(f, x->D(f,x), xx; args...)
 
-krawczyk(f::Function,  xx::Vector{Root{T}}; args...) where {T} =
+krawczyk(f::Function,  xx::AbstractVector{Root{T}}; args...) where {T} =
     krawczyk(f, x->D(f,x), [x.interval for x in xx]; args...)
