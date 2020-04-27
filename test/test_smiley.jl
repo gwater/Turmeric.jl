@@ -30,7 +30,7 @@ for example in (SmileyExample52, SmileyExample54, SmileyExample55)
         test_all_unique(roots_found)
         for rf in roots_found
             # check there is exactly one known root for each found root
-            @test sum(!isempty(rk ∩ rf.interval)
+            @test sum(!any(isempty.(rk .∩ rf.interval))
                     for rk in example.known_roots) == 1
         end
     end
