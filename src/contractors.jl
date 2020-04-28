@@ -144,34 +144,46 @@ function.
 
 Currently `Newton` and `Krawczyk` contractors use this.
 """
-function determine_region_status(op, f, R)
-    X = interval(R)
-    former_status = root_status(R)
+determine_region_status(op, f, R) =
+    determine_region_status(op, f, interval(R), root_status(R))
 
-    imX = f(X)
-
-    if former_status == :empty || !all(0 .∈ imX)
+function determine_region_status(op, f, X, former_status)
+    if former_status == :empty
+        # no further work required
         return Root(X, :empty)
     end
 
-    any(isempty.(imX)) && return Root(X, :empty)  # X is fully outside of the domain of f
+    imX = f(X)
+    if !all(0 .∈ imX)
+        return Root(X, :empty)
+    elseif any(isempty.(imX))
+        # X is fully outside of the domain of f
+        return Root(X, :empty)
+    end
 
     contracted_X = op(X)
 
-    # Only happens if X is partially out of the domain of f
-    any(isempty.(contracted_X)) && return Root(X, :unknown)  # force bisection
+    if any(isempty.(contracted_X))
+        # Only happens if X is partially out of the domain of f
+        Root(X, :unknown)  # force bisection
+    end
 
     # given that have the Jacobian, can also do mean value form
     NX = contracted_X .∩ X
 
-    any(isinf.(X)) && return Root(NX, :unknown)  # force bisection
-    any(isempty.(NX)) && return Root(X, :empty)
+    if any(isinf.(X))
+        return Root(NX, :unknown)  # force bisection
+    elseif any(isempty.(NX))
+        # by logic this means that X and contracted_X are disjoint
+        return Root(X, :empty)
+    end
 
-    if former_status == :unique || all(isinterior.(NX, X))  # isinterior; know there's a unique root inside
+    if former_status == :unique || all(isinterior.(NX, X))
+        # found unique root
         return Root(NX, :unique)
     end
 
-    return Root(NX, :unknown)
+    return Root(NX, :unknown) # force bisection
 end
 
 """
