@@ -158,11 +158,9 @@ determine_region_status(op, f, R) =
 # * how can f be undefined without exceptions? special definition?
 # * why is this so extremely defensive? cant we exclude some cases?
 function determine_region_status(op, f, X, former_status)
-    if former_status == :empty
+    if former_status != :unkown
         # no further work required
-        return Root(X, :empty)  # no-op
-    elseif former_status == :unique
-        return Root(X, :unique) # no-op
+        return Root(X, former_status)  # no-op
     end
 
     imX = f(X)
