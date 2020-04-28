@@ -12,7 +12,7 @@ function test_all_unique(xs)
 end
 
 const tol = 1e-6
-const method = Newton # NOTE: Bisection method performs badly in all examples
+for method in (Krawczyk, Newton) # NOTE: Bisection method performs badly in all examples
 
 @info("Testing method $(method)")
 
@@ -23,7 +23,10 @@ const method = Newton # NOTE: Bisection method performs badly in all examples
     # no reference data for roots given
 end
 
-for example in (SmileyExample52, SmileyExample54, SmileyExample55)
+for example in ifelse(method == Newton,
+    (SmileyExample52, SmileyExample54), # SmileyExample55 takes too long with Newton
+    (SmileyExample52, SmileyExample54, SmileyExample55),
+)
     @testset "$(example.title)" begin
         roots_found = roots(example.f, NumberInterval.(example.region), method, tol)
         @test length(roots_found) == length(example.known_roots)
@@ -35,3 +38,5 @@ for example in (SmileyExample52, SmileyExample54, SmileyExample55)
         end
     end
 end
+
+end # method loop
