@@ -147,43 +147,57 @@ Currently `Newton` and `Krawczyk` contractors use this.
 determine_region_status(op, f, R) =
     determine_region_status(op, f, interval(R), root_status(R))
 
+
+# general rules:
+# * always prefer discarding to bisecting
+# * avoid op and f (potentially expensive)
+# * refine only if f is defined everywhere on X (otherwise bisect)
+# * it should never happen that we return empty interval as unique
+# * no unique or empty state should be lost
+# note:
+# * how can f be undefined without exceptions? special definition?
+# * why is this so extremely defensive? cant we exclude some cases?
 function determine_region_status(op, f, X, former_status)
     if former_status == :empty
         # no further work required
-        return Root(X, :empty)
+        return Root(X, :empty)  # no-op
+    elseif former_status == :unique
+        return Root(X, :unique) # no-op
     end
 
     imX = f(X)
+
     if !all(0 .∈ imX)
-        return Root(X, :empty)
+        # no root inside X
+        return Root(X, :empty)  # discard
     elseif any(isempty.(imX))
-        # X is fully outside of the domain of f
-        return Root(X, :empty)
+        # f is undefined on X
+        return Root(X, :empty)  # discard
+    end
+
+    if any(isinf.(X))
+        # force refine to constrain infinity
+        return Root(op(X) .∩ X, :unknown)  # refined & bisect
     end
 
     contracted_X = op(X)
 
     if any(isempty.(contracted_X))
-        # Only happens if X is partially out of the domain of f
-        Root(X, :unknown)  # force bisection
+        # f is undefined on parts of X
+        return Root(X, :unknown)  # bisect
     end
 
-    # given that have the Jacobian, can also do mean value form
     NX = contracted_X .∩ X
 
-    if any(isinf.(X))
-        return Root(NX, :unknown)  # force bisection
-    elseif any(isempty.(NX))
-        # by logic this means that X and contracted_X are disjoint
-        return Root(X, :empty)
-    end
-
-    if former_status == :unique || all(isinterior.(NX, X))
+    if any(isempty.(NX))
+        # X and contracted_X are disjoint
+        return Root(X, :empty)  # discard
+    elseif all(isinterior.(NX, X))
         # found unique root
-        return Root(NX, :unique)
+        return Root(NX, :unique)  # refined
     end
 
-    return Root(NX, :unknown) # force bisection
+    return Root(NX, :unknown) # refined & bisect
 end
 
 """
@@ -196,6 +210,7 @@ function refine(op, X, tol)
     while maximum(diam.(X)) > tol  # avoid problem with tiny floating-point numbers if 0 is a root
         NX = op(X) .∩ X
         all(NX .=== X) && break  # reached limit of precision
+        any(isempty.(NX)) && break # dont exclude last element
         X = NX
     end
 
