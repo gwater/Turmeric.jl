@@ -174,6 +174,7 @@ function determine_region_status(op, f, X, former_status)
     end
 
     # not sure how I feel about this – might return empty set
+    # also this happens at most once; we should just test this initially
     if any(isinf.(X))
         # force refine to constrain infinity
         return Root(op(X) .∩ X, :unknown)  # refined & bisect
@@ -185,20 +186,16 @@ function determine_region_status(op, f, X, former_status)
     if any(isempty.(contracted_X))
         # f is undefined on parts of X
         return Root(X, :unknown)  # bisect
-    end
-
-    NX = contracted_X .∩ X
-
-    if any(isempty.(NX))
+    elseif any(isdisjoint.(contracted_X, X))
         # X and contracted_X are disjoint
         return Root(X, :empty)  # discard
-    elseif all(isinterior.(NX, X))
+    elseif all(isinterior.(contracted_X, X))
         # found unique root
-        return Root(NX, :unique)  # refined
+        return Root(contracted_X, :unique)  # refined
     end
 
     # fallback – we've learned nothing
-    return Root(NX, :unknown) # refined & bisect
+    return Root(contracted_X .∩ X, :unknown) # refined & bisect
 end
 
 """
