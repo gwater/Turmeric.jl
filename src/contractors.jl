@@ -163,8 +163,8 @@ function determine_region_status(op, f, X, former_status)
         return Root(X, former_status)  # no-op
     end
 
+    # refactor into assess_image()
     imX = f(X)
-
     if !all(0 .∈ imX)
         # no root inside X
         return Root(X, :empty)  # discard
@@ -173,6 +173,7 @@ function determine_region_status(op, f, X, former_status)
         return Root(X, :empty)  # discard
     end
 
+    # not sure how I feel about this – might return empty set
     if any(isinf.(X))
         # force refine to constrain infinity
         return Root(op(X) .∩ X, :unknown)  # refined & bisect
@@ -180,6 +181,7 @@ function determine_region_status(op, f, X, former_status)
 
     contracted_X = op(X)
 
+    # refactor into assess_contracted()
     if any(isempty.(contracted_X))
         # f is undefined on parts of X
         return Root(X, :unknown)  # bisect
@@ -195,6 +197,7 @@ function determine_region_status(op, f, X, former_status)
         return Root(NX, :unique)  # refined
     end
 
+    # fallback – we've learned nothing
     return Root(NX, :unknown) # refined & bisect
 end
 
