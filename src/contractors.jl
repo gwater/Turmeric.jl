@@ -1,6 +1,6 @@
 using LinearAlgebra
 
-import IntervalArithmetic: mid, ±
+import IntervalArithmetic: mid, ±, isdisjoint
 
 export Contractor
 export Bisection, Newton, Krawczyk
@@ -158,7 +158,7 @@ determine_region_status(op, f, R) =
 # * how can f be undefined without exceptions? special definition?
 # * why is this so extremely defensive? cant we exclude some cases?
 function determine_region_status(op, f, X, former_status)
-    if former_status != :unkown
+    if former_status in (:empty, :unique)
         # no further work required
         return Root(X, former_status)  # no-op
     end
