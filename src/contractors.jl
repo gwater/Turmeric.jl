@@ -129,14 +129,6 @@ end
 
 
 """
-    safe_isempty(X)
-
-Similar to `isempty` function for `IntervalBox`, but also works for `SVector`
-of `Interval`.
-"""
-safe_isempty(X) = isempty(IntervalBox(X))
-
-"""
     determine_region_status(contract, f, R)
 
 Contraction operation for contractors using the first derivative of the
