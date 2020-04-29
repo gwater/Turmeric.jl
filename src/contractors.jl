@@ -147,6 +147,34 @@ Currently `Newton` and `Krawczyk` contractors use this.
 determine_region_status(op, f, R) =
     determine_region_status(op, f, interval(R), root_status(R))
 
+const actions = (
+    unknown = :bisect_contraction,
+    image_nonzero = :discard,
+    image_empty = :discard,
+    empty_contraction = :discard,
+    disjoint_contraction = :discard,
+    interior_contraction = :mark_unique,
+)
+
+function assess_image(imX)
+    if !all(0 .∈ imX)
+        return :image_nonzero
+    elseif any(isempty.(imX))
+        return :image_empty
+    end
+    return :unknown
+end
+
+function assess_contraction(contracted_X, X)
+    if any(isempty.(contracted_X))
+        return :empty_contraction
+    elseif any(isdisjoint.(contracted_X, X))
+        return :disjoint_contraction
+    elseif all(isinterior.(contracted_X, X))
+        return :interior_contraction
+    end
+    return :unkown
+end
 
 # general rules:
 # * always prefer discarding to bisecting
