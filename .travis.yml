@@ -33,5 +33,3 @@ jobs:
 
 after_success:
   - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
-
-sudo: false
