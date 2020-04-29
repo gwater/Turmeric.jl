@@ -1,6 +1,6 @@
 using LinearAlgebra
 
-import IntervalArithmetic: mid, ±, isdisjoint
+import IntervalArithmetic: mid, ±, isdisjoint, isinterior
 
 export Contractor
 export Bisection, Newton, Krawczyk
@@ -139,83 +139,40 @@ Currently `Newton` and `Krawczyk` contractors use this.
 determine_region_status(op, f, R) =
     determine_region_status(op, f, interval(R), root_status(R))
 
-const actions = (
-    unknown = :bisect_contraction,
-    image_nonzero = :discard,
-    image_empty = :discard,
-    empty_contraction = :discard,
-    disjoint_contraction = :discard,
-    interior_contraction = :mark_unique,
-)
+contains_root(region) = all(0 .∈ region)
+isdisjoint(a::AbstractVector, b::AbstractVector) = any(isdisjoint.(a, b))
+isinterior(a::AbstractVector, b::AbstractVector) = all(isinterior.(a, b))
 
-function assess_image(imX)
-    if !all(0 .∈ imX)
-        return :image_nonzero
-    elseif any(isempty.(imX))
-        return :image_empty
-    end
-    return :unknown
-end
-
-function assess_contraction(contracted_X, X)
-    if any(isempty.(contracted_X))
-        return :empty_contraction
-    elseif any(isdisjoint.(contracted_X, X))
-        return :disjoint_contraction
-    elseif all(isinterior.(contracted_X, X))
-        return :interior_contraction
-    end
-    return :unkown
-end
-
-# general rules:
-# * always prefer discarding to bisecting
-# * avoid op and f (potentially expensive)
-# * refine only if f is defined everywhere on X (otherwise bisect)
-# * it should never happen that we return empty interval as unique
-# * no unique or empty state should be lost
-# note:
-# * how can f be undefined without exceptions? special definition?
-# * why is this so extremely defensive? cant we exclude some cases?
-function determine_region_status(op, f, X, former_status)
+function determine_region_status(op, f, region, former_status)
+    # NO-OP?
     if former_status in (:empty, :unique)
         # no further work required
-        return Root(X, former_status)  # no-op
+        return Root(region, former_status)
     end
 
-    # refactor into assess_image()
-    imX = f(X)
-    if !all(0 .∈ imX)
-        # no root inside X
-        return Root(X, :empty)  # discard
-    elseif any(isempty.(imX))
-        # f is undefined on X
-        return Root(X, :empty)  # discard
+    # DISCARD?
+    image = f(region)
+    if !contains_root(image) || isempty(image)
+        return Root(region, :empty)  # discard
+    end
+    contraction = op(region)
+    contraction_empty = any(isempty.(contraction))
+    if isdisjoint(contraction, region) && !contraction_empty
+        return Root(region, :empty)  # discard
     end
 
-    # not sure how I feel about this – might return empty set
-    # also this happens at most once; we should just test this initially
-    if any(isinf.(X))
-        # force refine to constrain infinity
-        return Root(op(X) .∩ X, :unknown)  # refined & bisect
+    # ROOT DETECTED?
+    if isinterior(contraction, region) && !contraction_empty
+        return Root(contraction, :unique)
     end
 
-    contracted_X = op(X)
-
-    # refactor into assess_contracted()
-    if any(isempty.(contracted_X))
-        # f is undefined on parts of X
-        return Root(X, :unknown)  # bisect
-    elseif any(isdisjoint.(contracted_X, X))
-        # X and contracted_X are disjoint
-        return Root(X, :empty)  # discard
-    elseif all(isinterior.(contracted_X, X))
-        # found unique root
-        return Root(contracted_X, :unique)  # refined
+    # CONTRACT?
+    if !contraction_empty
+        region = region .∩ contraction
     end
 
-    # fallback – we've learned nothing
-    return Root(contracted_X .∩ X, :unknown) # refined & bisect
+    # DEFAULT: BISECT
+    return Root(region, :unknown)
 end
 
 """
