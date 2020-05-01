@@ -55,8 +55,12 @@ function 𝒦(f, jacobian, X::T, α) where T <: AbstractVector
     m = mid.(X, α)
     mm = convert(T, m)
     J = jacobian(X)
-    Y = mid.(inv(jacobian(mm)))
-    return m - Y*f(mm) + (I - Y*J) * (X - m)
+    try
+        Y = mid.(inv(jacobian(mm)))
+        return m - Y*f(mm) + (I - Y*J) * (X - m)
+    catch
+        return X .± Inf
+    end    
 end
 
 
