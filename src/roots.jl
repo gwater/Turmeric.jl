@@ -5,7 +5,8 @@ import IntervalArithmetic: diam, bisect, isinterior
 export branch_and_prune, Bisection, Newton
 export BreadthFirstSearch, DepthFirstSearch
 
-diam(r::Root) = maximum(diam.(interval(r)))
+diam(a::AbstractVector) = maximum(diam.(a))
+diam(r::Root) = diam(interval(r))
 isnan(r::Root) = any(isnan.(interval(r)))
 
 function bisect(X::AbstractVector, α=where_bisect)

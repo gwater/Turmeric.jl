@@ -1,12 +1,17 @@
 using Base.Threads
+using ThreadPools
+using LazyArrays
 
-export troots, trefine
+import Base: last
+export last
+
+export troots, tfullcontract, fullcontract, ThreadedRootSearch
 
 struct BisectionLimit end
 
-struct ThreadBuffer
-    root_regions
-    indeterminate_regions
+struct ThreadBuffer{T, V <: AbstractVector{T}}
+    root_regions::V
+    indeterminate_regions::V
 end
 ThreadBuffer(region::T) where T = ThreadBuffer(T[], T[])
 
@@ -61,42 +66,76 @@ isfinished(t::Task) = isfinished(fetch(t))
 isfinished(ts::Tuple{Task, Task}) = isfinished(ts[1]) & isfinished(ts[2])
 isfinished(ts::AbstractVector) = mapreduce(isfinished, &, ts)
 
-function troots(region, contractor, f, tol, maxgenerations = 20)
-    # setup data structures
-    buffers = map(i -> ThreadBuffer(region), 1:nthreads())
-
-    push!(buffers[1].indeterminate_regions, region)
-    finished = false
-    # this we can turn into an iterator
-    while !finished
-        finished = true
-        vec_regions = qmap(buffers) do buffer
-            #crit = region -> diam(_region) > tol
-            crit = region -> true
-            unfinished_regions =
-               filter(crit, buffer.indeterminate_regions)
-            # remove unfinished regions from buffers
-            filter!(!crit, buffer.indeterminate_regions)
-            return unfinished_regions
-        end
-        regions = reduce(vcat, vec_regions)
-        # trigger task cascade
-        tasks = map(regions) do _region
-            task = troots!(buffers, _region, contractor, f, tol, 1, maxgenerations)
-        end
-        # wait for cascade to finish
-        finished = isfinished(tasks)
-        # repeats if we have unfinished regions
+struct ThreadedRootSearch{B}
+    buffers::B
+    contractor
+    f
+    tol::Float64
+    maxgenerations::Int
+    function ThreadedRootSearch(region::T, contractor, f, tol = 1e-7, maxgenerations = 20) where T
+        n = nthreads()
+        buffers = map(i -> ThreadBuffer(region), Tuple(1:n))
+        push!(buffers[1].indeterminate_regions, region)
+        return new{typeof(buffers)}(buffers, contractor, f, tol, maxgenerations)
     end
-
-    # collect results
-    root_regions = reduce(vcat, map(b -> b.root_regions, buffers))
-    indeterminate_regions =
-        reduce(vcat, map(b -> b.indeterminate_regions, buffers))
-    return root_regions, indeterminate_regions
 end
 
-function trefine(region, contractor, tol, maxiters = 100)
+Base.IteratorSize(::Type{ThreadedRootSearch}) = Base.SizeUnknown()
+Base.eltype(::Type{ThreadedRootSearch{B}}) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}} =
+    NTuple{2, ApplyVector{T, typeof(vcat), NTuple{N, V}}}
+
+function iterate(
+    search::ThreadedRootSearch{B},
+    finished = false
+) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}}
+    finished && return nothing
+    vec_regions = map(search.buffers) do buffer
+        #crit = region -> diam(_region) > tol
+        crit = region -> true
+        unfinished_regions =
+            filter(crit, buffer.indeterminate_regions)
+        # remove unfinished regions from buffers
+        filter!(!crit, buffer.indeterminate_regions)
+        return unfinished_regions
+    end
+    regions = reduce(vcat, vec_regions)
+    # trigger task cascade
+    tasks = map(regions) do _region
+        return troots!(
+            search.buffers,
+            _region,
+            search.contractor,
+            search.f,
+            search.tol,
+            1,
+            search.maxgenerations
+        )
+    end
+    root_regions = ApplyVector{T, typeof(vcat), NTuple{N, V}}(
+        vcat,
+        map(b -> b.root_regions, search.buffers)
+    )
+    indeterminate_regions =  ApplyVector{T, typeof(vcat), NTuple{N, V}}(
+        vcat,
+        map(b -> b.indeterminate_regions, search.buffers)
+    )
+    return (root_regions, indeterminate_regions), isfinished(tasks)::Bool
+end
+
+function last(search::T) where T <: ThreadedRootSearch
+    local res
+    for s in search
+        res = s
+    end
+    return res
+end
+
+function troots(region, contractor, f, tol = 1e-7, maxgenerations = 20)
+    search = ThreadedRootSearch(region, contractor, f, tol, maxgenerations)
+    return last(search)
+end
+
+function fullcontract(region::T, contractor, tol = 1e-7, maxiters = 100) where T
     for i in 1:maxiters
         region2 = region .∩ contractor(region)
         if maximum(diam.(region2)) < maximum(diam.(region))
@@ -108,3 +147,6 @@ function trefine(region, contractor, tol, maxiters = 100)
     end
     return region
 end
+
+tfullcontract(regions, contractor, tol = 1e-7) =
+    qmap(r -> fullcontract(r, contractor, tol), collect(regions))

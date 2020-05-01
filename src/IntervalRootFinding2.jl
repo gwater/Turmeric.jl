@@ -33,6 +33,8 @@ include("contractors.jl")
 include("branch_and_bound.jl")
 include("roots.jl")
 
+include("parallel.jl")
+
 gradient(f) = X -> ForwardDiff.gradient(f, X[:])
 
 const ∇ = gradient

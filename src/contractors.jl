@@ -51,12 +51,11 @@ end
 
 Multi-variable Krawczyk operator.
 """
-function 𝒦(f, jacobian, X::AbstractVector, α)
+function 𝒦(f, jacobian, X::T, α) where T <: AbstractVector
     m = mid.(X, α)
-    mm = convert(typeof(X), m)
+    mm = convert(T, m)
     J = jacobian(X)
     Y = mid.(inv(jacobian(mm)))
-
     return m - Y*f(mm) + (I - Y*J) * (X - m)
 end
 
