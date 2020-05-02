@@ -60,7 +60,7 @@ function 𝒦(f, jacobian, X::T, α) where T <: AbstractVector
         return m - Y*f(mm) + (I - Y*J) * (X - m)
     catch
         return X .± Inf
-    end    
+    end
 end
 
 
