@@ -25,9 +25,6 @@ import IntervalArithmetic: where_bisect
 
 include("root_object.jl")
 
-include("newton.jl")
-include("krawczyk.jl")
-
 include("complex.jl")
 include("contractors.jl")
 include("branch_and_bound.jl")
