@@ -36,15 +36,15 @@ function troots!(buffers, region, contractor, f, tol, generation, maxgenerations
         return nothing
     end
 
-    # CONTRACTABLE?
-    if !contraction_empty
-        region = region .∩ contraction
-    end
-
     # TOLERANCE LIMIT?
     if diam(region) < tol
         push!(buffer.indeterminate_regions, region)
         return nothing
+    end
+
+    # CONTRACTABLE?
+    if !contraction_empty
+        region = region .∩ contraction
     end
 
     # RECURSION LIMIT?
