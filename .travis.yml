@@ -18,6 +18,9 @@ notifications:
 env:
   global:
     - DOCUMENTER_DEBUG=true
+  matrix:
+    - JULIA_NUM_THREADS=1
+    - JULIA_NUM_THREADS=2
 
 jobs:
   allow_failures:
