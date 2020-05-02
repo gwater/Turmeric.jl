@@ -48,7 +48,7 @@ function troots!(buffers, region, contractor, f, tol, generation, maxgenerations
     end
 
     # RECURSION LIMIT?
-    if generation > maxgenerations || Sys.free_memory() / 2^30 < 1
+    if generation > maxgenerations || Sys.free_memory() / 2^20 < 100
         push!(buffer.indeterminate_regions, region)
         return BisectionLimit()
     end
