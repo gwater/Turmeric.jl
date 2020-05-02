@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/gwater/IntervalRootFinding2.jl.svg?branch=master)](https://travis-ci.org/gwater/IntervalRootFinding2.jl)
 
-[![codecov.io](http://codecov.io/github/gwater/IntervalRootFinding2/coverage.svg?branch=master)](http://codecov.io/github/gwater/IntervalRootFinding2.jl?branch=master)
+[![codecov.io](http://codecov.io/github/gwater/IntervalRootFinding2.jl/coverage.svg?branch=master)](http://codecov.io/github/gwater/IntervalRootFinding2.jl?branch=master)
 
 This package provides guaranteed methods for finding **roots** of functions, i.e. solutions to the equation `f(x) == 0` for a function `f`.
 To do so, it uses methods from interval analysis, using interval arithmetic from the [`IntervalArithmetic.jl`](https://github.com/JuliaIntervals/IntervalArithmetic.jl) package by the same authors and ambiguity detection from [`NumberIntervals.jl`](https://github.com/gwater/NumberIntervals.jl) by Josua Grawitter.
