@@ -8,19 +8,20 @@ using NumberIntervals, IntervalRootFinding2
 using .SmileyExample22, .SmileyExample52, .SmileyExample54, .SmileyExample55
 import IntervalRootFinding2: where_bisect, 𝒩, 𝒦
 
-const tol = 1e-7
+const tol = 1e-6
 
 #NOTE: Bisection method performs badly in all examples
 for (O, method) in ((𝒦, Krawczyk), (𝒩, Newton))
 
 @testset "$method: $(SmileyExample22.title)" begin
     function deriv(x)
-        jac = similar(x, length(x), length(x))
+        jac = similar(x, Size(length(x), length(x)))
         ForwardDiff.jacobian!(jac, SmileyExample22.f, x)
         return jac
     end
-    contractor(region) = O(SmileyExample22.f, deriv, region, where_bisect)
-    region = NumberInterval.(SVector(SmileyExample22.region...))
+    contractor(region) =
+        O(SmileyExample22.f, deriv, region, where_bisect)
+    region = NumberInterval.(SmileyExample22.region)
     roots_found, rest_regions =
         troots(region, contractor, SmileyExample22.f, tol, 10)
     @test length(roots_found) == 8
@@ -34,12 +35,12 @@ for example in ifelse(method == Newton,
 )
     @testset "$method: $(example.title)" begin
         function deriv(x)
-            jac = similar(x, length(x), length(x))
+            jac = similar(x, Size(length(x), length(x)))
             ForwardDiff.jacobian!(jac, example.f, x)
             return jac
         end
         contractor(region) = O(example.f, deriv, region, where_bisect)
-        region = NumberInterval.(SVector(example.region...))
+        region = NumberInterval.(example.region)
         roots_found, rest_regions =
             troots(region, contractor, example.f, tol, 10)
         @test length(roots_found) == length(example.known_roots)
