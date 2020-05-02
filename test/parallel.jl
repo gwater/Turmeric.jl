@@ -14,16 +14,8 @@ const tol = 1e-6
 for (O, method) in ((𝒦, Krawczyk), (𝒩, Newton))
 
 @testset "$method: $(SmileyExample22.title)" begin
-    function deriv(x)
-        jac = similar(x, Size(length(x), length(x)))
-        ForwardDiff.jacobian!(jac, SmileyExample22.f, x)
-        return jac
-    end
-    contractor(region) =
-        O(SmileyExample22.f, deriv, region, where_bisect)
     region = NumberInterval.(SmileyExample22.region)
-    roots_found, rest_regions =
-        troots(region, contractor, SmileyExample22.f, tol, 10)
+    roots_found, rest_regions = troots(SmileyExample22.f, region, O, tol, 10)
     @test length(roots_found) == 8
     @test length(rest_regions) == 0
     # no reference data for roots given
@@ -34,15 +26,8 @@ for example in ifelse(method == Newton,
     (SmileyExample52, SmileyExample54, SmileyExample55),
 )
     @testset "$method: $(example.title)" begin
-        function deriv(x)
-            jac = similar(x, Size(length(x), length(x)))
-            ForwardDiff.jacobian!(jac, example.f, x)
-            return jac
-        end
-        contractor(region) = O(example.f, deriv, region, where_bisect)
         region = NumberInterval.(example.region)
-        roots_found, rest_regions =
-            troots(region, contractor, example.f, tol, 10)
+        roots_found, rest_regions = troots(example.f, region, O, tol, 10)
         @test length(roots_found) == length(example.known_roots)
         @test length(rest_regions) == 0
         for rf in roots_found

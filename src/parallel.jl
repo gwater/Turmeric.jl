@@ -1,6 +1,7 @@
 using Base.Threads
 using ThreadPools
 using LazyArrays
+using ForwardDiff
 
 import Base: last
 export last
@@ -72,7 +73,7 @@ struct ThreadedRootSearch{B}
     f
     tol::Float64
     maxgenerations::Int
-    function ThreadedRootSearch(region::T, contractor, f, tol = 1e-7, maxgenerations = 20) where T
+    function ThreadedRootSearch(f, region::T, contractor, tol = 1e-7, maxgenerations = 20) where T
         n = nthreads()
         buffers = map(i -> ThreadBuffer(region), Tuple(1:n))
         push!(buffers[1].indeterminate_regions, region)
@@ -130,12 +131,28 @@ function last(search::T) where T <: ThreadedRootSearch
     return res
 end
 
-function troots(region, contractor, f, tol = 1e-7, maxgenerations = 20)
-    search = ThreadedRootSearch(region, contractor, f, tol, maxgenerations)
+function _troots(f, region, contractor, tol = 1e-7, maxgenerations = 20)
+    search = ThreadedRootSearch(f, region, contractor, tol, maxgenerations)
     return last(search)
 end
 
-function fullcontract(region::T, contractor, tol = 1e-7, maxiters = 100) where T
+function troots(
+    f,
+    region::T,
+    contractor_type = 𝒦,
+    tol = 1e-7,
+    maxgenerations = 20
+) where T <: AbstractVector
+    function grad(region)
+        jac = similar(region, Size(length(region), length(region)))
+        ForwardDiff.jacobian!(jac, f, region)
+        return jac
+    end
+    contractor(region) = contractor_type(f, grad, region, where_bisect)
+    return _troots(f, region, contractor, tol, maxgenerations)
+end
+
+function fullcontract(contractor, region::T, tol = 1e-7, maxiters = 100) where T
     for i in 1:maxiters
         region2 = region .∩ contractor(region)
         if maximum(diam.(region2)) < maximum(diam.(region))
@@ -148,5 +165,5 @@ function fullcontract(region::T, contractor, tol = 1e-7, maxiters = 100) where T
     return region
 end
 
-tfullcontract(regions, contractor, tol = 1e-7) =
-    qmap(r -> fullcontract(r, contractor, tol), collect(regions))
+tfullcontract(contractor, regions, tol = 1e-7) =
+    qmap(r -> fullcontract(contractor, r, tol), collect(regions))
