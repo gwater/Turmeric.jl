@@ -1,4 +1,4 @@
-# Turmeric.jl
+# Turmeric.jl – tasty roots
 
 [![Build Status](https://travis-ci.org/gwater/Turmeric.jl.svg?branch=master)](https://travis-ci.org/gwater/Turmeric.jl) [![codecov.io](http://codecov.io/github/gwater/Turmeric.jl/coverage.svg?branch=master)](http://codecov.io/github/gwater/Turmeric.jl?branch=master)
 
