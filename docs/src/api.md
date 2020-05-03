@@ -3,34 +3,27 @@
 ## Main interface
 
 ```@autodocs
-Modules = [IntervalRootFinding]
+Modules = [IntervalRootFinding2]
 Pages   = ["roots.jl"]
-```
-
-## `Root` object
-
-```@autodocs
-Modules = [IntervalRootFinding]
-Pages   = ["root_object.jl"]
 ```
 
 ## Contractors
 
 ```@autodocs
-Modules = [IntervalRootFinding]
+Modules = [IntervalRootFinding2]
 Pages   = ["contractors.jl"]
 ```
 
-## Branch-and-bound search interface
+## ThreadSearch interface
 
 ```@autodocs
-Modules = [IntervalRootFinding]
-Pages   = ["branch_and_bound.jl"]
+Modules = [IntervalRootFinding2]
+Pages   = ["threadsearch.jl"]
 ```
 
-## Others
+## Contract
 
 ```@autodocs
-Modules = [IntervalRootFinding]
-Pages   = ["complex.jl", "linear_eq.jl", "newton1d.jl", "quadratic.jl", "slopes.jl"]
+Modules = [IntervalRootFinding2]
+Pages   = ["contract.jl"]
 ```
