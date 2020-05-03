@@ -6,7 +6,7 @@ makedocs(
     doctest = true,
     format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
     sitename = "IntervalRootFinding2.jl",
-    authors = "David P. Sanders and Luis Benet",
+    authors = "David P. Sanders and Luis Benet, and Josua Grawitter",
     pages = Any[
         "Home" => "index.md",
         "`roots` interface" => "roots.md",
