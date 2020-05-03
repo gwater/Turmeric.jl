@@ -13,11 +13,11 @@ function _newton_contract(f, derivative, region::T, mid_point) where {T}
     return m - (f(m) / derivative(region))
 end
 
-function _newton_contract(f::Function, jacobian::Function, region::AbstractVector{T}, mid_point) where T
+function _newton_contract(f, jacobian, region::R, mid_point) where {T, R <: AbstractVector{T}}
     m = T.(mid.(region, mid_point))
     J = jacobian(region)
     try
-        return convert(typeof(region), m .- (J \ f(m)))
+        return convert(R, m .- (J \ f(m)))
     catch
         return region .± Inf
     end
