@@ -1,5 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
-IntervalRootFinding2 = "bc8ceb21-a8fe-4071-b36a-0b0ea65b9c09"
+Turmeric = "bc8ceb21-a8fe-4071-b36a-0b0ea65b9c09"
 NumberIntervals = "978898f6-561e-11e9-3f66-13949d9e5c8a"

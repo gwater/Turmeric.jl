@@ -1,6 +1,6 @@
-# IntervalRootFinding2.jl
+# Turmeric.jl
 
-[![Build Status](https://travis-ci.org/gwater/IntervalRootFinding2.jl.svg?branch=master)](https://travis-ci.org/gwater/IntervalRootFinding2.jl) [![codecov.io](http://codecov.io/github/gwater/IntervalRootFinding2.jl/coverage.svg?branch=master)](http://codecov.io/github/gwater/IntervalRootFinding2.jl?branch=master)
+[![Build Status](https://travis-ci.org/gwater/Turmeric.jl.svg?branch=master)](https://travis-ci.org/gwater/Turmeric.jl) [![codecov.io](http://codecov.io/github/gwater/Turmeric.jl/coverage.svg?branch=master)](http://codecov.io/github/gwater/Turmeric.jl?branch=master)
 
 This package provides guaranteed methods for finding **roots** of functions, i.e. solutions to the equation `f(x) == 0` for a function `f` using the multi-threading features first introduced in Julia 1.3.
 To do so, it uses methods from interval analysis, using interval arithmetic from the [`IntervalArithmetic.jl`](https://github.com/JuliaIntervals/IntervalArithmetic.jl) package and ambiguity detection from [`NumberIntervals.jl`](https://github.com/gwater/NumberIntervals.jl).
@@ -12,7 +12,7 @@ To do so, it uses methods from interval analysis, using interval arithmetic from
 The basic function is `roots`. A standard Julia function and an interval is provided and the `roots` function return a list of intervals containing *all* roots of the function located in the starting interval.
 
 ```jl
-julia> using NumberIntervals, IntervalRootFinding2
+julia> using NumberIntervals, Turmeric
 
 julia> f(x) = sin(x) - 0.1*x^2 + 1
 f (generic function with 1 method)

@@ -1,4 +1,4 @@
-module IntervalRootFinding2
+module Turmeric
 
 include("helpers.jl")
 include("contractors.jl")

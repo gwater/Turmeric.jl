@@ -1,4 +1,4 @@
-# `IntervalRootFinding2.jl`
+# `Turmeric.jl`
 
 This package provides guaranteed methods for finding **roots** of functions $f: \mathbb{R}^n \to \mathbb{R}^n$ with $n \ge 1$, i.e. vectors (or scalars, for $n=1$) $\mathbb{x}$ for which $f(\mathbb{x}) = \mathbb{0}$. In principle, it guarantees to find *all* roots inside a given box in $\mathbb{R}^n$, or report subboxes for which it is unable to provide guarantees.
 
@@ -6,7 +6,7 @@ To do so, it uses methods from interval analysis, using interval arithmetic from
 
 !!! warning
 
-    While this package aimed at providing *guaranteed results* and despite our best efforts and test suite, some bugs may remain and there are several known issues with corner cases. Please look at the [issue tracker](https://github.com/gwater/IntervalRootFinding2.jl/issues) and report there any odd and/or incorrect behavior.
+    While this package aimed at providing *guaranteed results* and despite our best efforts and test suite, some bugs may remain and there are several known issues with corner cases. Please look at the [issue tracker](https://github.com/gwater/Turmeric.jl/issues) and report there any odd and/or incorrect behavior.
 
 ## Basic 1D example
 
@@ -17,7 +17,7 @@ When provided with this information, the `roots` function will return a vector o
 Example:
 
 ```jl
-julia> using NumberIntervals, IntervalRootFinding2
+julia> using NumberIntervals, Turmeric
 
 julia> rts = roots(x -> x^2 - 2x, NumberInterval(0, 10))
 (NumberInterval{Float64}[x ∈ [1.97591, 2.0384]], NumberInterval{Float64}[x ∈ [0, 1.88237e-14]])

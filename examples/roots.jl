@@ -1,4 +1,4 @@
-using NumberIntervals, IntervalRootFinding2, StaticArrays
+using NumberIntervals, Turmeric, StaticArrays
 
 rts = roots(sin, NumberInterval(-5, 5))
 

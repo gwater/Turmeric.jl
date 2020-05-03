@@ -2,7 +2,7 @@ include("../examples/smiley_examples.jl")
 
 using Test
 
-using NumberIntervals, IntervalRootFinding2
+using NumberIntervals, Turmeric
 using .SmileyExample22, .SmileyExample52, .SmileyExample54, .SmileyExample55
 
 const tol = 1e-6

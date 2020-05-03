@@ -3,27 +3,27 @@
 ## Main interface
 
 ```@autodocs
-Modules = [IntervalRootFinding2]
+Modules = [Turmeric]
 Pages   = ["roots.jl"]
 ```
 
 ## Contractors
 
 ```@autodocs
-Modules = [IntervalRootFinding2]
+Modules = [Turmeric]
 Pages   = ["contractors.jl"]
 ```
 
 ## ThreadSearch interface
 
 ```@autodocs
-Modules = [IntervalRootFinding2]
+Modules = [Turmeric]
 Pages   = ["threadsearch.jl"]
 ```
 
 ## Contract
 
 ```@autodocs
-Modules = [IntervalRootFinding2]
+Modules = [Turmeric]
 Pages   = ["contract.jl"]
 ```

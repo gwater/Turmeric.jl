@@ -12,7 +12,7 @@ Both the Newton and Krawczyk methods can determine if a root is unique in an int
 The method used is given as the third (optional) argument of the `roots` function:
 
 ```jl
-julia> using NumberIntervals, IntervalRootFinding2
+julia> using NumberIntervals, Turmeric
 
 julia> roots(log, NumberInterval(-2, 2), Newton())
 (NumberInterval{Float64}[x ∈ [0.999592, 1.00026]], NumberInterval{Float64}[])

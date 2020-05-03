@@ -1,5 +1,5 @@
 
-using NumberIntervals, IntervalRootFinding2, StaticArrays, ForwardDiff
+using NumberIntervals, Turmeric, StaticArrays, ForwardDiff
 using Test
 
 all_unique(rts) = length(rts[2]) == 0

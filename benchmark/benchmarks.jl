@@ -5,7 +5,7 @@ using BenchmarkTools
 using ForwardDiff
 using IntervalArithmetic
 using NumberIntervals
-using IntervalRootFinding2
+using Turmeric
 using StaticArrays
 import Random
 

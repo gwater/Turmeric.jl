@@ -1,4 +1,4 @@
-The IntervalRootFinding2.jl package is licensed under the MIT "Expat" License:
+The Turmeric.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2014-2020: Luis Benet & David P. Sanders
 >               2020: Josua Grawitter
