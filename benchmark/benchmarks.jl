@@ -4,6 +4,7 @@ using .SmileyExample22, .SmileyExample52, .SmileyExample54, .SmileyExample55
 using BenchmarkTools
 using ForwardDiff
 using IntervalArithmetic
+using NumberIntervals
 using IntervalRootFinding2
 using StaticArrays
 import Random
@@ -11,19 +12,36 @@ import Random
 const SUITE = BenchmarkGroup()
 
 Random.seed!(0)  # Seed the RNG to get consistent results
-tol = 1e-15
+tol = 1e-6
 
 include("dietmar_ratz_functions.jl")
 
 S = SUITE["Smiley"] = BenchmarkGroup()
-for example in (SmileyExample22, SmileyExample52, SmileyExample54) #, SmileyExample55)
+for example in (SmileyExample22, SmileyExample52, SmileyExample54, SmileyExample55)
     s = S[example.title] = BenchmarkGroup()
-    for method in (Newton, Krawczyk)
-        s[string(method)] = @benchmarkable roots($(example.f), $(example.region), $method, $tol)
+    methods = (
+        #Newton,
+        Krawczyk,
+    )
+    for method in methods
+        s[string(method)] = @benchmarkable roots($(example.f), $(NumberInterval.(example.region)), $method, $tol)
     end
 end
 
-S = SUITE["Rastigrin stationary points"] = BenchmarkGroup()
+S = SUITE["Smiley, multithread"] = BenchmarkGroup()
+for example in (SmileyExample22, SmileyExample52, SmileyExample54, SmileyExample55)
+    s = S[example.title] = BenchmarkGroup()
+    methods = (
+        #IntervalRootFinding2.𝒩,
+        IntervalRootFinding2.𝒦,
+    )
+    for method in methods
+        s[string(method)] = @benchmarkable troots($(example.f), $(NumberInterval.(example.region)), $method, $tol)
+    end
+end
+
+#=
+S = SUITE["Rastrigin stationary points"] = BenchmarkGroup()
 
 # Rastrigin function:
 const A = 10
@@ -55,3 +73,4 @@ for (k, dr) in enumerate(dr_functions)
 
     s["Automatic differentiation"] = @benchmarkable ForwardDiff.derivative($dr, $X)
 end
+=#

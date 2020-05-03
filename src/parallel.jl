@@ -49,7 +49,7 @@ function troots!(buffers, region, contractor, f, tol, generation, maxgenerations
     end
 
     # RECURSION LIMIT?
-    if generation > maxgenerations || Sys.free_memory() / 2^20 < 100
+    if generation > maxgenerations
         push!(buffer.indeterminate_regions, region)
         return BisectionLimit()
     end
@@ -72,12 +72,18 @@ struct ThreadedRootSearch{B}
     contractor
     f
     tol::Float64
-    maxgenerations::Int
-    function ThreadedRootSearch(f, region::T, contractor, tol = 1e-7, maxgenerations = 20) where T
+    target_task_number::Int
+    function ThreadedRootSearch(f, region::T, contractor, tol = 1e-7, target_task_number = nothing) where T
         n = nthreads()
         buffers = map(i -> ThreadBuffer(region), Tuple(1:n))
         push!(buffers[1].indeterminate_regions, region)
-        return new{typeof(buffers)}(buffers, contractor, f, tol, maxgenerations)
+        return new{typeof(buffers)}(
+            buffers,
+            contractor,
+            f,
+            tol,
+            ifelse(isnothing(target_task_number), 1_000n, target_task_number)
+        )
     end
 end
 
@@ -85,32 +91,45 @@ Base.IteratorSize(::Type{ThreadedRootSearch}) = Base.SizeUnknown()
 Base.eltype(::Type{ThreadedRootSearch{B}}) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}} =
     NTuple{2, ApplyVector{T, typeof(vcat), NTuple{N, V}}}
 
+function chunk_regions!(buffers::NTuple{N}) where N
+    vec_regions = map(buffers) do buffer
+        unfinished_regions = copy(buffer.indeterminate_regions)
+        # remove unfinished regions from buffers without freeing memory
+        empty!(buffer.indeterminate_regions)
+        return unfinished_regions
+    end
+    regions = reduce(vcat, vec_regions)
+    n = length(regions)
+    chunks = map(1:N:n) do i
+        return @view regions[i:min(n, i + N - 1)]
+    end
+    return chunks
+end
+
 function iterate(
     search::ThreadedRootSearch{B},
     finished = false
 ) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}}
     finished && return nothing
-    vec_regions = map(search.buffers) do buffer
-        #crit = region -> diam(_region) > tol
-        crit = region -> true
-        unfinished_regions =
-            filter(crit, buffer.indeterminate_regions)
-        # remove unfinished regions from buffers
-        filter!(!crit, buffer.indeterminate_regions)
-        return unfinished_regions
-    end
-    regions = reduce(vcat, vec_regions)
-    # trigger task cascade
-    tasks = map(regions) do _region
-        return troots!(
-            search.buffers,
-            _region,
-            search.contractor,
-            search.f,
-            search.tol,
-            1,
-            search.maxgenerations
-        )
+    chunks = chunk_regions!(search.buffers)
+    finished = true
+    for regions in chunks
+        max_generations =
+            max(1, floor(Int, log2(search.target_task_number / length(regions))))
+        # trigger task cascade
+        tasks = qmap(regions) do _region
+            return troots!(
+                search.buffers,
+                _region,
+                search.contractor,
+                search.f,
+                search.tol,
+                1,
+                max_generations
+            )
+        end
+        # wait for cascade to finish
+        finished &= isfinished(tasks)
     end
     root_regions = ApplyVector{T, typeof(vcat), NTuple{N, V}}(
         vcat,
@@ -120,7 +139,7 @@ function iterate(
         vcat,
         map(b -> b.indeterminate_regions, search.buffers)
     )
-    return (root_regions, indeterminate_regions), isfinished(tasks)::Bool
+    return (root_regions, indeterminate_regions), finished
 end
 
 function last(search::T) where T <: ThreadedRootSearch
@@ -131,8 +150,8 @@ function last(search::T) where T <: ThreadedRootSearch
     return res
 end
 
-function _troots(f, region, contractor, tol = 1e-7, maxgenerations = 20)
-    search = ThreadedRootSearch(f, region, contractor, tol, maxgenerations)
+function _troots(f, region, contractor, tol = 1e-7, target_task_number = nothing)
+    search = ThreadedRootSearch(f, region, contractor, tol, target_task_number)
     return last(search)
 end
 
@@ -141,7 +160,7 @@ function troots(
     region::T,
     contractor_type = 𝒦,
     tol = 1e-7,
-    maxgenerations = 20
+    target_task_number = nothing
 ) where T <: AbstractVector
     function grad(region)
         jac = similar(region, Size(length(region), length(region)))
@@ -149,7 +168,7 @@ function troots(
         return jac
     end
     contractor(region) = contractor_type(f, grad, region, where_bisect)
-    return _troots(f, region, contractor, tol, maxgenerations)
+    return _troots(f, region, contractor, tol, target_task_number)
 end
 
 function fullcontract(contractor, region::T, tol = 1e-7, maxiters = 100) where T

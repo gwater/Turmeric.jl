@@ -11,11 +11,11 @@ import IntervalRootFinding2: where_bisect, 𝒩, 𝒦
 const tol = 1e-6
 
 #NOTE: Bisection method performs badly in all examples
-for (O, method) in ((𝒦, Krawczyk), (𝒩, Newton))
+for (operator, method) in ((𝒦, Krawczyk), (𝒩, Newton))
 
 @testset "$method: $(SmileyExample22.title)" begin
     region = NumberInterval.(SmileyExample22.region)
-    roots_found, rest_regions = troots(SmileyExample22.f, region, O, tol, 10)
+    roots_found, rest_regions = troots(SmileyExample22.f, region, operator, tol)
     @test length(roots_found) == 8
     @test length(rest_regions) == 0
     # no reference data for roots given
@@ -27,7 +27,7 @@ for example in ifelse(method == Newton,
 )
     @testset "$method: $(example.title)" begin
         region = NumberInterval.(example.region)
-        roots_found, rest_regions = troots(example.f, region, O, tol, 10)
+        roots_found, rest_regions = troots(example.f, region, operator, tol)
         @test length(roots_found) == length(example.known_roots)
         @test length(rest_regions) == 0
         for rf in roots_found
