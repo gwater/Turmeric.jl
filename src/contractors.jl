@@ -1,6 +1,6 @@
 using LinearAlgebra
 
-import IntervalArithmetic: mid, ±, isdisjoint, isinterior
+import IntervalArithmetic: mid, ±, isdisjoint, isinterior, entireinterval
 
 export Contractor
 export Bisection, Newton, Krawczyk
@@ -146,6 +146,8 @@ contains_root(region) = all(0 .∈ region)
 isdisjoint(a::AbstractVector, b::AbstractVector) = any(isdisjoint.(a, b))
 isinterior(a::AbstractVector, b::AbstractVector) = all(isinterior.(a, b))
 
+strict_isinterior(a, b) = isinterior(a, b) && !any(a .=== entireinterval.(a))
+
 function determine_region_status(op, f, region, former_status)
     # NO-OP?
     if former_status in (:empty, :unique)
@@ -160,12 +162,12 @@ function determine_region_status(op, f, region, former_status)
     end
     contraction = op(region)
     contraction_empty = any(isempty.(contraction))
-    if isdisjoint(contraction, region) && !contraction_empty
+    if !contraction_empty && isdisjoint(contraction, region)
         return Root(region, :empty)  # discard
     end
 
     # ROOT DETECTED?
-    if isinterior(contraction, region) && !contraction_empty
+    if !contraction_empty && strict_isinterior(contraction, region)
         return Root(contraction, :unique)
     end
 

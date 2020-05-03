@@ -49,7 +49,7 @@ newtonlike_methods = [Newton, Krawczyk]
 
     # Infinite interval
     rts = roots(x -> x^2 - 2, NumberInterval(-Inf, Inf))
-    @test_broken length(rts) == 2
+    @test length(rts) == 2
 end
 
 
@@ -73,7 +73,7 @@ end
     # Infinite interval
     X = SVector(NumberInterval(-Inf, Inf), NumberInterval(-Inf, Inf))
     rts = roots(f, X, Newton)
-    @test_broken length(rts) == 2
+    @test length(rts) == 2
 end
 
 
@@ -111,7 +111,7 @@ end
 @testset "Infinite domain" begin
     for method in newtonlike_methods
         rts = roots(x -> x^2 - 2, NumberInterval(-Inf, Inf), method)
-        @test_broken length(filter(isunique, rts)) == 2
+        @test length(filter(isunique, rts)) == 2
     end
 end
 

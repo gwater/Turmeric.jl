@@ -27,12 +27,12 @@ function troots!(buffers, region, contractor, f, tol, generation, maxgenerations
     end
     contraction = contractor(region)
     contraction_empty = any(isempty.(contraction))
-    if isdisjoint(contraction, region) && !contraction_empty
+    if  !contraction_empty && isdisjoint(contraction, region)
         return nothing
     end
 
     # UNIQUE?
-    if isinterior(contraction, region) && !contraction_empty
+    if  !contraction_empty && strict_isinterior(contraction, region)
         push!(buffer.root_regions, contraction)
         return nothing
     end
