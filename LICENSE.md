@@ -1,6 +1,7 @@
-The IntervalRootFinding.jl.jl package is licensed under the MIT "Expat" License:
+The IntervalRootFinding2.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2014-2020: Luis Benet & David P. Sanders
+>               2020: Josua Grawitter
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
