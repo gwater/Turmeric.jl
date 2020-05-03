@@ -1,24 +1,23 @@
-using IntervalArithmetic, IntervalRootFinding2, StaticArrays
+using NumberIntervals, IntervalRootFinding2, StaticArrays
 
-rts = roots(sin, -5..5)
+rts = roots(sin, NumberInterval(-5, 5))
 
-rts = roots(sin, -5..6, Bisection)
-rts = roots(sin, rts, Newton)
+rts = roots(sin, NumberInterval(-5, 6), Bisection())
+rts = roots(sin, NumberInterval(-5, 6), Newton())
 
 # 2D:
 f(x, y) = SVector(x^2 + y^2 - 1, y - x)
 f(X) = f(X...)
 
-rts = roots(f, (-5..5) × (-5..5))
-rts = roots(f, rts, Bisection)
+rts = roots(f, SVector(NumberInterval(-5, 5), NumberInterval(-5, 5)))
 
 # complex:
-x = -5..6
+x = NumberInterval(-5, 6)
 Xc = Complex(x, x)
 f(z) = z^3 - 1
 
-rts = roots(f, Xc, Bisection)
-rts = roots(f, rts, Newton)
+rts = roots(f, Xc, Bisection())
+rts = roots(f, Xc, Newton())
 rts = roots(f, Xc)
 
 # From R docs:
@@ -33,8 +32,8 @@ function g(x)
             )
 end
 
-X = (-5..5)
-@time rts = roots(g, X × X × X)
+X = NumberInterval(-5, 5)
+@time rts = roots(g, SVector(X, X, X))
 
 
 
@@ -42,16 +41,14 @@ X = (-5..5)
 
 h(xv) = ((x,y) = xv; SVector(2*x - y - exp(-x), -x + 2*y - exp(-y)))
 
-rts = roots(h, X × X, Bisection)
-rts = roots(h, rts, Newton)
+rts = roots(h, SVector(X, X), Bisection())
 
 
 
 # Dennis-Schnabel:
 h(xv) = ((x, y) = xv; SVector(x^2 + y^2 - 2, exp(x - 1) + y^3 - 2))
 
-rts = roots(h, X × X, Bisection)
-rts = roots(h, rts, Newton)
+rts = roots(h, SVector(X, X), Bisection())
 
 # Test suites:
 
@@ -69,9 +66,9 @@ rosenbrock(x, y) = SVector( 1 - x, 10 * (y - x^2) )
 rosenbrock(X) = rosenbrock(X...)
 
 rosenbrock(xx) = ( (x, y) = xx; SVector( 1 - x, 1000 * (y - x^2) ) )
-X = IntervalBox(-1e5..1e5, 2)
+X = NumberInterval(-1e5, 1e5)
 
-rts = roots(rosenbrock, X)
+rts = roots(rosenbrock, SVector(X, X))
 
 
 
