@@ -4,7 +4,7 @@ using Test
 
 all_unique(rts) = length(rts[2]) == 0
 
-function test_newtonlike(f, X, method, nsol, tol=1e-10)
+function test_newtonlike(f, X, method, nsol)
     rts = roots(f, X, method)
     @test length(rts[1]) == nsol
     @test all_unique(rts)
@@ -86,6 +86,7 @@ end
     for method in newtonlike_methods
         rts = roots(x -> x^2 - 2, NumberInterval(-Inf, Inf), method)
         @test length(rts[1]) == 2
+        @test all_unique(rts)
     end
 end
 
@@ -106,6 +107,6 @@ end
     tol = 1e-5
 
     for method in newtonlike_methods
-        test_newtonlike(gradf, XX, method, 25, tol)
+        test_newtonlike(gradf, XX, method, 25)
     end
 end

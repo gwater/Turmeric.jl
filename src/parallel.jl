@@ -1,7 +1,6 @@
 using Base.Threads
 using ThreadPools
 using LazyArrays
-using ForwardDiff
 
 import Base: last, iterate
 export last, iterate
@@ -16,7 +15,7 @@ struct ThreadBuffer{T, V <: AbstractVector{T}}
 end
 ThreadBuffer(region::T) where T = ThreadBuffer(T[], T[])
 
-function troots!(buffers, region, _contract, f, tol, generation, maxgenerations)
+function troots!(buffers, region, contractor, f, tol, generation, maxgenerations)
 
     buffer = buffers[threadid()]
 
@@ -25,7 +24,7 @@ function troots!(buffers, region, _contract, f, tol, generation, maxgenerations)
     if !contains_root(image) || isempty(image)
         return nothing
     end
-    contraction = _contract(region)
+    contraction = contractor(region)
     contraction_empty = any(isempty.(contraction))
     if  !contraction_empty && isdisjoint(contraction, region)
         return nothing
@@ -56,8 +55,8 @@ function troots!(buffers, region, _contract, f, tol, generation, maxgenerations)
 
     # BISECT.
     a, b = bisect(region)
-    task1 = Threads.@spawn troots!(buffers, a, _contract, f, tol, generation + 1, maxgenerations)
-    task2 = Threads.@spawn troots!(buffers, b, _contract, f, tol, generation + 1, maxgenerations)
+    task1 = Threads.@spawn troots!(buffers, a, contractor, f, tol, generation + 1, maxgenerations)
+    task2 = Threads.@spawn troots!(buffers, b, contractor, f, tol, generation + 1, maxgenerations)
     return task1, task2
 end
 
@@ -69,14 +68,14 @@ isfinished(ts::AbstractVector) = mapreduce(isfinished, &, ts)
 
 struct ThreadedRootSearch{B}
     buffers::B
-    _contract
+    contractor
     f
     tol::Float64
     target_task_number::Int
     function ThreadedRootSearch(
         f,
         region::T,
-        _contract,
+        contractor,
         tol = default_tolerance,
         target_task_number = nothing
     ) where T
@@ -85,7 +84,7 @@ struct ThreadedRootSearch{B}
         push!(buffers[1].indeterminate_regions, region)
         return new{typeof(buffers)}(
             buffers,
-            _contract,
+            contractor,
             f,
             tol,
             ifelse(isnothing(target_task_number), 1_000n, target_task_number)
@@ -127,7 +126,7 @@ function iterate(
             return troots!(
                 search.buffers,
                 _region,
-                search._contract,
+                search.contractor,
                 search.f,
                 search.tol,
                 1,
@@ -156,44 +155,35 @@ function last(search::T) where T <: ThreadedRootSearch
     return res
 end
 
-function _troots(f, region, _contract, tol = default_tolerance, target_task_number = nothing)
-    search = ThreadedRootSearch(f, region, _contract, tol, target_task_number)
+function _troots(f, region, contractor, tol = default_tolerance, target_task_number = nothing)
+    search = ThreadedRootSearch(f, region, contractor, tol, target_task_number)
     return last(search)
 end
 
 function troots(
     f,
     region,
-    contractor = default_contractor,
+    method::Union{Krawczyk,Newton} = default_contractor,
     tol = default_tolerance,
     target_task_number = nothing
 )
-    function deriv(region)
-        return ForwardDiff.derivative(f, region)
-    end
-    _contract(region) = contract(f, deriv, region, contractor, where_bisect)
-    return _troots(f, region, _contract, tol, target_task_number)
+    contractor = GradientContractor(f, method, region)
+    return _troots(f, region, contractor, tol, target_task_number)
 end
 
 function troots(
     f,
-    region::T,
-    contractor = default_contractor,
+    region,
+    method::Bisection,
     tol = default_tolerance,
     target_task_number = nothing
-) where T <: AbstractVector
-    function grad(region)
-        jac = similar(region, Size(length(region), length(region)))
-        ForwardDiff.jacobian!(jac, f, region)
-        return jac
-    end
-    _contract(region) = contract(f, grad, region, contractor, where_bisect)
-    return _troots(f, region, _contract, tol, target_task_number)
+)
+    return _troots(f, region, TrivialContractor(), tol, target_task_number)
 end
 
-function fullcontract(_contract, region::T, tol = default_tolerance, maxiters = 100) where T
+function fullcontract(contractor, region::T, tol = default_tolerance, maxiters = 100) where T
     for i in 1:maxiters
-        region2 = region .∩ _contract(region)
+        region2 = region .∩ contractor(region)
         if maximum(diam.(region2)) < maximum(diam.(region))
             region = region2
         else
@@ -204,5 +194,5 @@ function fullcontract(_contract, region::T, tol = default_tolerance, maxiters = 
     return region
 end
 
-tfullcontract(_contract, regions, tol = default_tolerance) =
-    qmap(r -> fullcontract(_contract, r, tol), collect(regions))
+tfullcontract(contractor, regions, tol = default_tolerance) =
+    qmap(r -> fullcontract(contractor, r, tol), collect(regions))

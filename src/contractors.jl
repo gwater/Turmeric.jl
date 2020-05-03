@@ -1,28 +1,19 @@
 using LinearAlgebra
 
+using ForwardDiff
+using StaticArrays
 
-export Bisection, Newton, Krawczyk, contract
+import IntervalArithmetic: where_bisect
 
-struct Newton end
-struct Krawczyk end
-struct Bisection end
-const NewtonLike = Union{Type{Newton}, Type{Krawczyk}}
+export Bisection, Newton, Krawczyk, GradientContractor, TrivialContractor
 
-"""
-    contract(f, f′, region, method, α)
-
-Contract region `region` using `method` which can be Newton(), Krawczyk(),
-or Bisection(). (Note: Bisection() is a no-op implemented for benchmarking.)
-"""
-contract(f, f′, region, ::Bisection, α) = region
-
-function contract(f, f′, region::T, ::Newton, α) where {T}
-    m = convert(T, mid(region, α))
-    return m - (f(m) / f′(region))
+function _newton_contract(f, derivative, region::T, mid_point) where {T}
+    m = convert(T, mid(region, mid_point))
+    return m - (f(m) / derivative(region))
 end
 
-function contract(f::Function, jacobian::Function, region::AbstractVector{T}, ::Newton, α) where T
-    m = T.(mid.(region, α))
+function _newton_contract(f::Function, jacobian::Function, region::AbstractVector{T}, mid_point) where T
+    m = T.(mid.(region, mid_point))
     J = jacobian(region)
     try
         return convert(typeof(region), m .- (J \ f(m)))
@@ -31,16 +22,15 @@ function contract(f::Function, jacobian::Function, region::AbstractVector{T}, ::
     end
 end
 
+function _krawczyk_contract(f, derivative, region::T, mid_point) where T
+    m = convert(T, mid(region, mid_point))
+    Y = 1 / derivative(m)
 
-function contract(f, f′, region::T, ::Krawczyk, α) where T
-    m = convert(T, mid(region, α))
-    Y = 1 / f′(m)
-
-    return m - Y*f(m) + (1 - Y*f′(region)) * (region - m)
+    return m - Y*f(m) + (1 - Y*derivative(region)) * (region - m)
 end
 
-function contract(f, jacobian, region::T, ::Krawczyk, α) where T <: AbstractVector
-    m = mid.(region, α)
+function _krawczyk_contract(f, jacobian, region::T, mid_point) where T <: AbstractVector
+    m = mid.(region, mid_point)
     mm = convert(T, m)
     J = jacobian(region)
     try
@@ -50,3 +40,58 @@ function contract(f, jacobian, region::T, ::Krawczyk, α) where T <: AbstractVec
         return region .± Inf
     end
 end
+
+struct Newton end
+struct Krawczyk end
+struct Bisection end
+
+"""
+    GradientContractor(f, method, jacobian)
+    GradientContractor(f, method, region)
+
+Contractor for `f` based on `method` (`Newton()` or `Krawczyk()`), either using
+the explicitely supplied function `jacobian(region)` or a jacobian method for
+`region` using automatic differentiation of `f` from `ForwardDiff.jl`.
+
+    (contractor::GradientContractor)(region, mid_point = IntervalArithmetic.where_bisect)
+
+Calling instances of `GradientContractor` returns a contraction of `region`.
+"""
+struct GradientContractor{T}
+    f
+    method::T
+    jacobian
+end
+
+function GradientContractor(f, method, ::R) where R <: AbstractVector
+    function grad(region)
+        jac = similar(region, Size(length(region), length(region)))
+        ForwardDiff.jacobian!(jac, f, region)
+        return jac
+    end
+    return GradientContractor(f, method, grad)
+end
+
+function GradientContractor(f, method, ::R) where R <: Number
+    derivative(region) = ForwardDiff.derivative(f, region)
+    return GradientContractor(f, method, derivative)
+end
+
+(contractor::GradientContractor{Newton})(region, mid_point = where_bisect) =
+    _newton_contract(contractor.f, contractor.jacobian, region, mid_point)
+
+(contractor::GradientContractor{Krawczyk})(region, mid_point = where_bisect) =
+    _krawczyk_contract(contractor.f, contractor.jacobian, region, mid_point)
+
+"""
+    TrivialContractor()
+
+Trivial contractor used for benchmarking which solely relies on bisections.
+
+    (contractor::TrivialContractor)(region) = region
+
+Calling instances of `TrivialContractor` returns `region` itself.
+"""
+struct TrivialContractor end
+
+(contractor::TrivialContractor)(region) = region

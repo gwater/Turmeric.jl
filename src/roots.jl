@@ -1,6 +1,6 @@
 
 """
-    roots(f, X, contractor=Krawczyk(), tol=1e-7, maxtasks = nothing)
+    roots(f, X, method = Krawczyk(), tol = 1e-7, maxtasks = nothing)
 
 Find all isolated roots of a function `f:R^n → R^n` in a region `X`, if the
 number of roots is finite.
@@ -8,7 +8,7 @@ number of roots is finite.
 Inputs:
   - `f`: function whose roots will be found
   - `X`: `Interval` or `IntervalBox` in which roots are searched
-  - `contractor`: function that, when applied to the function `f`, determines
+  - `method`: function that, when applied to the function `f`, determines
     the status of a given box `X`. It returns the new box and a symbol
     indicating the status. Current possible values are `Bisection()`, `Newton()`
     and `Krawczyk()`
@@ -17,5 +17,5 @@ Inputs:
   - `maxtasks`: Limit the number of tasks spawned concurrently. By default set
     to `10^4 * nthreads()`.
 """
-roots(f, X, contractor=Krawczyk(), tol=1e-7, maxtasks = nothing) =
-    troots(f, X, contractor, tol, maxtasks)
+roots(f, X, method=Krawczyk(), tol=1e-7, maxtasks = nothing) =
+    troots(f, X, method, tol, maxtasks)
