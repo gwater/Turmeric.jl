@@ -5,7 +5,7 @@ using LazyArrays
 import Base: last, iterate
 export last, iterate
 
-export tfullcontract, fullcontract, ThreadedRootSearch
+export ThreadedRootSearch
 
 struct BisectionLimit end
 
@@ -154,45 +154,3 @@ function last(search::T) where T <: ThreadedRootSearch
     end
     return res
 end
-
-function _troots(f, region, contractor, tol = default_tolerance, target_task_number = nothing)
-    search = ThreadedRootSearch(f, region, contractor, tol, target_task_number)
-    return last(search)
-end
-
-function troots(
-    f,
-    region,
-    method::Union{Krawczyk,Newton} = default_contractor,
-    tol = default_tolerance,
-    target_task_number = nothing
-)
-    contractor = GradientContractor(f, method, region)
-    return _troots(f, region, contractor, tol, target_task_number)
-end
-
-function troots(
-    f,
-    region,
-    method::Bisection,
-    tol = default_tolerance,
-    target_task_number = nothing
-)
-    return _troots(f, region, TrivialContractor(), tol, target_task_number)
-end
-
-function fullcontract(contractor, region::T, tol = default_tolerance, maxiters = 100) where T
-    for i in 1:maxiters
-        region2 = region .∩ contractor(region)
-        if maximum(diam.(region2)) < maximum(diam.(region))
-            region = region2
-        else
-            break
-        end
-        maximum(diam.(region)) < tol && break
-    end
-    return region
-end
-
-tfullcontract(contractor, regions, tol = default_tolerance) =
-    qmap(r -> fullcontract(contractor, r, tol), collect(regions))

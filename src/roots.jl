@@ -1,6 +1,11 @@
 
 export roots
 
+function _roots(f, region, contractor, tol = default_tolerance, target_task_number = nothing)
+    search = ThreadedRootSearch(f, region, contractor, tol, target_task_number)
+    return last(search)
+end
+
 """
     roots(f, region, method = Krawczyk(), tol = 1e-7, maxtasks = nothing)
 
@@ -20,5 +25,23 @@ Inputs:
   - `maxtasks`: Limit the number of tasks spawned concurrently. By default set
     to `10^4 * nthreads()`.
 """
-roots(f, region, method=Krawczyk(), tol=1e-7, maxtasks = nothing) =
-    troots(f, region, method, tol, maxtasks)
+function roots(
+    f,
+    region,
+    method::Union{Krawczyk,Newton} = default_contractor,
+    tol = default_tolerance,
+    target_task_number = nothing
+)
+    contractor = GradientContractor(f, method, region)
+    return _roots(f, region, contractor, tol, target_task_number)
+end
+
+function roots(
+    f,
+    region,
+    method::Bisection,
+    tol = default_tolerance,
+    target_task_number = nothing
+)
+    return _roots(f, region, TrivialContractor(), tol, target_task_number)
+end
