@@ -110,3 +110,16 @@ end
         test_newtonlike(gradf, XX, method, 25)
     end
 end
+
+@testset "Full contraction of roots" begin
+    region = NumberInterval(-5, 5)
+    tol = 1e-7
+    for method in newtonlike_methods
+        rts = roots(sin, region, method, tol)
+        contractor = GradientContractor(sin, method, region)
+        contracted_regions = tfullcontract(contractor, rts[1], tol)
+        for _region in contracted_regions
+            @test diam(_region) < tol
+        end
+    end
+end
