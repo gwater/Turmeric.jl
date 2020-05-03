@@ -7,6 +7,8 @@
 This package provides guaranteed methods for finding **roots** of functions, i.e. solutions to the equation `f(x) == 0` for a function `f` using the multi-threading features first introduced in Julia 1.3.
 To do so, it uses methods from interval analysis, using interval arithmetic from the [`IntervalArithmetic.jl`](https://github.com/JuliaIntervals/IntervalArithmetic.jl) package and ambiguity detection from [`NumberIntervals.jl`](https://github.com/gwater/NumberIntervals.jl).
 
+> NOTE: Multi-threading is currently only tested on Linux. In order to benefit from multi-threading you need to supply the environment variable `JULIA_NUM_THREADS=X` (where `X` is replaced by the number of threads). For more details check the Julia language manual.
+
 ## Basic usage examples
 
 The basic function is `roots`. A standard Julia function and an interval is provided and the `roots` function return a list of intervals containing *all* roots of the function located in the starting interval.
