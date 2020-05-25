@@ -87,7 +87,7 @@ function (contractor::GradientContractor{T})(region, mid_point = where_bisect) w
         mid_point,
         contractor.method
     )
-    if any(isempty.(contraction))
+    if _isempty(contraction)
         throw(DomainError(region))
     end
     return contraction

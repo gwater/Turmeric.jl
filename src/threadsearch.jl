@@ -22,7 +22,7 @@ Returns parts of `region` which are left unexplored.
 """
 function explore_region!(buffer, region, contractor, f, tol)
     image = f(region)
-    if !contains_root(image) || any(isempty.(image))
+    if !contains_root(image) || _isempty(image)
         return empty.(region)
     end
 
@@ -85,7 +85,7 @@ function (search::ThreadedRootSearch)(region, generation, maxgeneration)
     buffer = search.buffers[threadid()]
 
     _region = explore_region!(buffer, region, search.contractor, search.f, search.tol)
-    if any(isempty.(_region))
+    if _isempty(_region)
         return true
     end
 

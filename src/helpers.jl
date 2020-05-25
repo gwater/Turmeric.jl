@@ -19,7 +19,11 @@ function bisect(X::AbstractVector, i::Integer, α=where_bisect)
 end
 
 contains_root(region) = all(0 .∈ region)
-isdisjoint(a::AbstractVector, b::AbstractVector) = any(isdisjoint.(a, b))
 isinterior(a::AbstractVector, b::AbstractVector) = all(isinterior.(a, b))
 
 strict_isinterior(a, b) = isinterior(a, b) && !any(a .=== entireinterval.(a))
+
+# these definitions break the concept of Vectors as sets of their elements
+# (rather than Cartesian boxes)
+_isempty(a) = any(isempty.(a))
+_isdisjoint(a, b) = any(isdisjoint.(a, b))
