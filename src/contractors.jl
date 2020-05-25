@@ -79,11 +79,17 @@ function GradientContractor(f, method, ::R) where R <: Number
     return GradientContractor(f, method, derivative)
 end
 
-(contractor::GradientContractor{Newton})(region, mid_point = where_bisect) =
-    _newton_contract(contractor.f, contractor.jacobian, region, mid_point)
+function (contractor::GradientContractor{Newton})(region, mid_point = where_bisect)
+    contraction = _newton_contract(contractor.f, contractor.jacobian, region, mid_point)
+    @assert !any(isempty.(contraction))
+    return contraction
+end
 
-(contractor::GradientContractor{Krawczyk})(region, mid_point = where_bisect) =
-    _krawczyk_contract(contractor.f, contractor.jacobian, region, mid_point)
+function (contractor::GradientContractor{Krawczyk})(region, mid_point = where_bisect)
+    contraction = _krawczyk_contract(contractor.f, contractor.jacobian, region, mid_point)
+    @assert !any(isempty.(contraction))
+    return contraction
+end
 
 """
     TrivialContractor()

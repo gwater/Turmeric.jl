@@ -22,20 +22,9 @@ function refine!(buffer, region, contractor, f, tol)
     end
 
     contraction = contractor(region)
-    if !any(isempty.(contraction)) # how would this happen?
-        if isdisjoint(contraction, region)
-            return empty.(region)
-        end
-
-        # UNIQUE?
-        if strict_isinterior(contraction, region)
-            push!(buffer.root_regions, contraction)
-            return empty.(region)
-        end
-
-        region = region .∩ contraction # contract a bit
-    else
-        error()
+    if strict_isinterior(contraction, region)
+        push!(buffer.root_regions, contraction)
+        return empty.(region)
     end
 
     if diam(region) < tol
@@ -43,28 +32,26 @@ function refine!(buffer, region, contractor, f, tol)
         return empty.(region)
     end
 
-    return region
+    return region .∩ contraction
 end
 
-function troots!(buffers, region, contractor, f, tol, generation, maxgenerations)
+spawn_tasks!(buffers::Tuple, region, contractor, f, tol, generation, maxgenerations) =
+    spawn_tasks!(buffers[threadid()], region, contractor, f, tol, generation, maxgenerations)
 
-    buffer = buffers[threadid()]
-
+function spawn_tasks!(buffer::ThreadBuffer, region, contractor, f, tol, generation, maxgenerations)
     _region = refine!(buffer, region, contractor, f, tol)
     if any(isempty.(_region))
         return nothing
     end
 
-    # RECURSION LIMIT?
     if generation > maxgenerations
         push!(buffer.indeterminate_regions, _region)
         return BisectionLimit()
     end
 
-    # BISECT.
     a, b = bisect(_region)
-    task1 = Threads.@spawn troots!(buffers, a, contractor, f, tol, generation + 1, maxgenerations)
-    task2 = Threads.@spawn troots!(buffers, b, contractor, f, tol, generation + 1, maxgenerations)
+    task1 = Threads.@spawn spawn_tasks!(buffers, a, contractor, f, tol, generation + 1, maxgenerations)
+    task2 = Threads.@spawn spawn_tasks!(buffers, b, contractor, f, tol, generation + 1, maxgenerations)
     return task1, task2
 end
 
@@ -131,7 +118,7 @@ function iterate(
             max(1, floor(Int, log2(search.target_task_number / length(regions))))
         # trigger task cascade
         tasks = qmap(regions) do _region
-            return troots!(
+            return spawn_tasks!(
                 search.buffers,
                 _region,
                 search.contractor,
