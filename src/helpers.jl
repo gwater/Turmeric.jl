@@ -1,6 +1,6 @@
 
-import IntervalArithmetic: mid, ±, isdisjoint, isinterior, entireinterval,
-    where_bisect, diam, bisect
+import IntervalArithmetic: mid, ±, isinterior, entireinterval, where_bisect,
+    diam, bisect
 
 export bisect
 
@@ -26,4 +26,3 @@ strict_isinterior(a, b) = isinterior(a, b) && !any(a .=== entireinterval.(a))
 # these definitions break the concept of Vectors as sets of their elements
 # (rather than Cartesian boxes)
 _isempty(a) = any(isempty.(a))
-_isdisjoint(a, b) = any(isdisjoint.(a, b))

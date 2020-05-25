@@ -4,7 +4,7 @@ using Turmeric
 using Base.Threads
 using StaticArrays
 
-import Turmeric: strict_isinterior, contains_root, _isdisjoint
+import Turmeric: strict_isinterior, contains_root
 
 @testset "guarded_reduce()" begin
     nothing
@@ -41,14 +41,6 @@ end
     a, b = bisect(c)
     @test all(a .∪ b .=== c)
     @test !all(a .=== c)
-end
-
-@testset "_isdisjoint()" begin
-    x1 = NumberInterval(-1., 1.)
-    x2 = NumberInterval(0., 3.)
-    x3 = NumberInterval(2., 3.)
-    @test _isdisjoint(SVector(x1, x1), SVector(x1, x3))
-    @test !_isdisjoint(SVector(x1, x1), SVector(x1, x2))
 end
 
 @testset "contains_root()" begin
