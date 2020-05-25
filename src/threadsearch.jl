@@ -15,46 +15,54 @@ struct ThreadBuffer{T, V <: AbstractVector{T}}
 end
 ThreadBuffer(region::T) where T = ThreadBuffer(T[], T[])
 
+function refine!(buffer, region, contractor, f, tol)
+    image = f(region)
+    if !contains_root(image) || any(isempty.(image))
+        return empty.(region)
+    end
+
+    contraction = contractor(region)
+    if !any(isempty.(contraction)) # how would this happen?
+        if isdisjoint(contraction, region)
+            return empty.(region)
+        end
+
+        # UNIQUE?
+        if strict_isinterior(contraction, region)
+            push!(buffer.root_regions, contraction)
+            return empty.(region)
+        end
+
+        region = region .∩ contraction # contract a bit
+    else
+        error()
+    end
+
+    if diam(region) < tol
+        push!(buffer.indeterminate_regions, region)
+        return empty.(region)
+    end
+
+    return region
+end
+
 function troots!(buffers, region, contractor, f, tol, generation, maxgenerations)
 
     buffer = buffers[threadid()]
 
-    # DISCARD?
-    image = f(region)
-    if !contains_root(image) || isempty(image)
+    _region = refine!(buffer, region, contractor, f, tol)
+    if any(isempty.(_region))
         return nothing
-    end
-    contraction = contractor(region)
-    contraction_empty = any(isempty.(contraction))
-    if  !contraction_empty && isdisjoint(contraction, region)
-        return nothing
-    end
-
-    # UNIQUE?
-    if  !contraction_empty && strict_isinterior(contraction, region)
-        push!(buffer.root_regions, contraction)
-        return nothing
-    end
-
-    # TOLERANCE LIMIT?
-    if diam(region) < tol
-        push!(buffer.indeterminate_regions, region)
-        return nothing
-    end
-
-    # CONTRACTABLE?
-    if !contraction_empty
-        region = region .∩ contraction
     end
 
     # RECURSION LIMIT?
     if generation > maxgenerations
-        push!(buffer.indeterminate_regions, region)
+        push!(buffer.indeterminate_regions, _region)
         return BisectionLimit()
     end
 
     # BISECT.
-    a, b = bisect(region)
+    a, b = bisect(_region)
     task1 = Threads.@spawn troots!(buffers, a, contractor, f, tol, generation + 1, maxgenerations)
     task2 = Threads.@spawn troots!(buffers, b, contractor, f, tol, generation + 1, maxgenerations)
     return task1, task2
