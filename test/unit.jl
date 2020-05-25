@@ -78,7 +78,7 @@ end
 
 @testset "GradientContractor" begin
     x = NumberInterval(-10.0, -1.0)
-    contractor = GradientContractor(log, Newton(),)
+    contractor = GradientContractor(log, Newton(), x)
     @test_throws DomainError contractor(x)
 end
 
