@@ -81,13 +81,17 @@ end
 
 function (contractor::GradientContractor{Newton})(region, mid_point = where_bisect)
     contraction = _newton_contract(contractor.f, contractor.jacobian, region, mid_point)
-    @assert !any(isempty.(contraction))
+    if any(isempty.(contraction))
+        throw(DomainError(region))
+    end
     return contraction
 end
 
 function (contractor::GradientContractor{Krawczyk})(region, mid_point = where_bisect)
     contraction = _krawczyk_contract(contractor.f, contractor.jacobian, region, mid_point)
-    @assert !any(isempty.(contraction))
+    if any(isempty.(contraction))
+        throw(DomainError(region))
+    end
     return contraction
 end
 

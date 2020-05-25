@@ -7,8 +7,6 @@ export last, iterate
 
 export ThreadedRootSearch
 
-struct BisectionLimit end
-
 struct ThreadBuffer{T, V <: AbstractVector{T}}
     root_regions::V
     indeterminate_regions::V
@@ -71,12 +69,13 @@ struct ThreadedRootSearch{B}
     target_task_number::Int
     function ThreadedRootSearch(
         f,
-        region::T,
+        region,
         contractor,
         tol = default_tolerance,
-        target_task_number = nothing
-    ) where T
-        n = nthreads()
+        target_task_number = nothing,
+        n = nothing
+    )
+        n = isnothing(n) ? nthreads() : n
         buffers = map(i -> ThreadBuffer(region), Tuple(1:n))
         push!(buffers[1].indeterminate_regions, region)
         return new{typeof(buffers)}(
@@ -84,7 +83,7 @@ struct ThreadedRootSearch{B}
             contractor,
             f,
             tol,
-            ifelse(isnothing(target_task_number), 1_000n, target_task_number)
+            isnothing(target_task_number) ? 1000n : target_task_number
         )
     end
 end
