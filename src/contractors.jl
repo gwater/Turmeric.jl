@@ -16,8 +16,9 @@ end
 function _newton_contract(f, jacobian, region::R, mid_point) where {T, R <: AbstractVector{T}}
     m = T.(mid.(region, mid_point))
     J = jacobian(region)
+    fm = f(m)
     try
-        return convert(R, m .- (J \ f(m)))
+        return convert(R, m .- (J \ fm))
     catch
         return region .± Inf
     end
@@ -26,17 +27,17 @@ end
 function _krawczyk_contract(f, derivative, region::T, mid_point) where T
     m = convert(T, mid(region, mid_point))
     Y = 1 / derivative(m)
-
-    return m - Y*f(m) + (1 - Y*derivative(region)) * (region - m)
+    return m - Y * f(m) + (1 - Y * derivative(region)) * (region - m)
 end
 
 function _krawczyk_contract(f, jacobian, region::T, mid_point) where T <: AbstractVector
     m = mid.(region, mid_point)
     mm = convert(T, m)
     J = jacobian(region)
+    fmm = f(mm)
     try
         Y = mid.(inv(jacobian(mm)))
-        return m - Y*f(mm) + (I - Y*J) * (region - m)
+        return m - Y * fmm + (I - Y * J) * (region - m)
     catch
         return region .± Inf
     end
