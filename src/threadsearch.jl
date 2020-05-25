@@ -35,29 +35,33 @@ function refine_region!(buffer, region, contractor, f, tol)
     return region .∩ contraction
 end
 
-function spawn_tasks!(buffers, region, contractor, f, tol, generation, maxgeneration)
-    buffer = buffers[threadid()]
-    _region = refine_region!(buffer, region, contractor, f, tol)
+refine_region!(buffer, region, search) =
+    refine_region!(buffer, region, search.contractor, search.f, search.tol)
+
+function complete!(search, region, generation, maxgeneration)
+    buffer = search.buffers[threadid()]
+
+    _region = refine_region!(buffer, region, search)
     if any(isempty.(_region))
-        return nothing
+        return true
     end
-    a, b = bisect(_region)
+
     if generation == maxgeneration
-        push!(buffer.indeterminate_regions, a)
-        push!(buffer.indeterminate_regions, b)
-        return BisectionLimit()
-    else
-        task1 = Threads.@spawn spawn_tasks!(buffers, a, contractor, f, tol, generation + 1, maxgeneration)
-        task2 = Threads.@spawn spawn_tasks!(buffers, b, contractor, f, tol, generation + 1, maxgeneration)
-        return task1, task2
+        append!(buffer.indeterminate_regions, bisect(_region))
+        return false
     end
+
+    tasks = map(bisect(_region)) do i
+        Threads.@spawn complete!(search, i, generation + 1, maxgeneration)
+    end
+    # we cannot wait for results here because we need to free up the thread
+    return tasks
 end
 
-isfinished(::Nothing) = true
-isfinished(::BisectionLimit) = false
-isfinished(t::Task) = isfinished(fetch(t))
-isfinished(ts::Tuple{Task, Task}) = isfinished(ts[1]) & isfinished(ts[2])
-isfinished(ts::AbstractVector) = mapreduce(isfinished, &, ts)
+complete!(b::Bool) = b
+complete!(t::Task) = complete!(fetch(t))
+complete!(ts::NTuple{N, Task}) where N = mapreduce(complete!, &, ts)
+complete!(ts::AbstractVector) = mapreduce(complete!, &, ts)
 
 struct ThreadedRootSearch{B}
     buffers::B
@@ -106,28 +110,20 @@ end
 
 function iterate(
     search::ThreadedRootSearch{B},
-    finished = false
+    completed = false
 ) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}}
-    finished && return nothing
+    completed && return nothing
     chunks = chunk_regions!(search.buffers)
-    finished = true
+    completed = true
     for regions in chunks
         max_generations =
             max(1, floor(Int, log2(search.target_task_number / length(regions))))
         # trigger task cascade
         tasks = qmap(regions) do _region
-            return spawn_tasks!(
-                search.buffers,
-                _region,
-                search.contractor,
-                search.f,
-                search.tol,
-                1,
-                max_generations
-            )
+            return complete!(search, _region, 1, max_generations)
         end
         # wait for cascade to finish
-        finished &= isfinished(tasks)
+        completed &= complete!(tasks)
     end
     root_regions = ApplyVector{T, typeof(vcat), NTuple{N, V}}(
         vcat,
@@ -137,7 +133,7 @@ function iterate(
         vcat,
         map(b -> b.indeterminate_regions, search.buffers)
     )
-    return (root_regions, indeterminate_regions), finished
+    return (root_regions, indeterminate_regions), completed
 end
 
 function last(search::T) where T <: ThreadedRootSearch
