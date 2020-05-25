@@ -15,7 +15,7 @@ struct ThreadBuffer{T, V <: AbstractVector{T}}
 end
 ThreadBuffer(region::T) where T = ThreadBuffer(T[], T[])
 
-function refine!(buffer, region, contractor, f, tol)
+function refine_region!(buffer, region, contractor, f, tol)
     image = f(region)
     if !contains_root(image) || any(isempty.(image))
         return empty.(region)
@@ -35,24 +35,22 @@ function refine!(buffer, region, contractor, f, tol)
     return region .∩ contraction
 end
 
-spawn_tasks!(buffers::Tuple, region, contractor, f, tol, generation, maxgenerations) =
-    spawn_tasks!(buffers[threadid()], region, contractor, f, tol, generation, maxgenerations)
-
-function spawn_tasks!(buffer::ThreadBuffer, region, contractor, f, tol, generation, maxgenerations)
-    _region = refine!(buffer, region, contractor, f, tol)
+function spawn_tasks!(buffers, region, contractor, f, tol, generation, maxgeneration)
+    buffer = buffers[threadid()]
+    _region = refine_region!(buffer, region, contractor, f, tol)
     if any(isempty.(_region))
         return nothing
     end
-
-    if generation > maxgenerations
-        push!(buffer.indeterminate_regions, _region)
-        return BisectionLimit()
-    end
-
     a, b = bisect(_region)
-    task1 = Threads.@spawn spawn_tasks!(buffers, a, contractor, f, tol, generation + 1, maxgenerations)
-    task2 = Threads.@spawn spawn_tasks!(buffers, b, contractor, f, tol, generation + 1, maxgenerations)
-    return task1, task2
+    if generation == maxgeneration
+        push!(buffer.indeterminate_regions, a)
+        push!(buffer.indeterminate_regions, b)
+        return BisectionLimit()
+    else
+        task1 = Threads.@spawn spawn_tasks!(buffers, a, contractor, f, tol, generation + 1, maxgeneration)
+        task2 = Threads.@spawn spawn_tasks!(buffers, b, contractor, f, tol, generation + 1, maxgeneration)
+        return task1, task2
+    end
 end
 
 isfinished(::Nothing) = true
