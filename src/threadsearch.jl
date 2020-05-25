@@ -124,6 +124,17 @@ function chunks(regions, chunksize)
     end
 end
 
+estimate_generations(target_task_number, nregions) =
+    max(1, floor(Int, log2(target_task_number / nregions)))
+
+function (search::ThreadedRootSearch{B})(unfinished_regions) where {N, B <: NTuple{N}}
+    return mapreduce(&, chunks(unfinished_regions, N)) do regions
+        max_generations = estimate_generations(search.target_task_number, length(regions))
+        tasks = qmap(r -> search(r, 1, max_generations), regions)
+        return guarded_reduce(&, tasks)
+    end
+end
+
 function collect_regions(buffers::B)  where {
     N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}
 }
@@ -138,19 +149,10 @@ function collect_regions(buffers::B)  where {
     return root_regions, indeterminate_regions
 end
 
-estimate_generations(target_task_number, nregions) =
-    max(1, floor(Int, log2(target_task_number / nregions)))
-
-function iterate(search::ThreadedRootSearch{B}, completed = false) where {N, B <: NTuple{N}}
+function iterate(search::ThreadedRootSearch, completed = false)
     completed && return nothing
-
     unfinished_regions = pop_unfinished!(search.buffers)
-    completed = mapreduce(&, chunks(unfinished_regions, N)) do regions
-        max_generations = estimate_generations(search.target_task_number, length(regions))
-        tasks = qmap(r -> search(r, 1, max_generations), regions)
-        return guarded_reduce(&, tasks)
-    end
-
+    completed = search(unfinished_regions)
     return collect_regions(search.buffers), completed
 end
 
