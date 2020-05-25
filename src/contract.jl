@@ -4,7 +4,7 @@ export tfullcontract, fullcontract
 function fullcontract(contractor, region::T, tol = default_tolerance, maxiters = 100) where T
     for i in 1:maxiters
         region2 = region .∩ contractor(region)
-        if maximum(diam.(region2)) < maximum(diam.(region))
+        if diam(region2) < diam(region)
             region = region2
         else
             break
@@ -15,4 +15,4 @@ function fullcontract(contractor, region::T, tol = default_tolerance, maxiters =
 end
 
 tfullcontract(contractor, regions, tol = default_tolerance) =
-    qmap(r -> fullcontract(contractor, r, tol), collect(regions))
+    qmap(r -> fullcontract(contractor, r, tol), regions)
