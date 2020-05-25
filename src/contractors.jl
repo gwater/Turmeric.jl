@@ -8,12 +8,16 @@ import IntervalArithmetic: where_bisect
 
 export Bisection, Newton, Krawczyk, GradientContractor, TrivialContractor
 
-function _newton_contract(f, derivative, region::T, mid_point) where {T}
+struct Newton end
+struct Krawczyk end
+struct Bisection end
+
+function _contract(f, derivative, region::T, mid_point, ::Newton) where {T}
     m = convert(T, mid(region, mid_point))
     return m - (f(m) / derivative(region))
 end
 
-function _newton_contract(f, jacobian, region::R, mid_point) where {T, R <: AbstractVector{T}}
+function _contract(f, jacobian, region::R, mid_point, ::Newton) where {T, R <: AbstractVector{T}}
     m = T.(mid.(region, mid_point))
     J = jacobian(region)
     fm = f(m)
@@ -24,13 +28,13 @@ function _newton_contract(f, jacobian, region::R, mid_point) where {T, R <: Abst
     end
 end
 
-function _krawczyk_contract(f, derivative, region::T, mid_point) where T
+function _contract(f, derivative, region::T, mid_point, ::Krawczyk) where T
     m = convert(T, mid(region, mid_point))
     Y = 1 / derivative(m)
     return m - Y * f(m) + (1 - Y * derivative(region)) * (region - m)
 end
 
-function _krawczyk_contract(f, jacobian, region::T, mid_point) where T <: AbstractVector
+function _contract(f, jacobian, region::T, mid_point, ::Krawczyk) where T <: AbstractVector
     m = mid.(region, mid_point)
     mm = convert(T, m)
     J = jacobian(region)
@@ -42,10 +46,6 @@ function _krawczyk_contract(f, jacobian, region::T, mid_point) where T <: Abstra
         return region .± Inf
     end
 end
-
-struct Newton end
-struct Krawczyk end
-struct Bisection end
 
 """
     GradientContractor(f, method, jacobian)
@@ -79,16 +79,14 @@ function GradientContractor(f, method, ::R) where R <: Number
     return GradientContractor(f, method, derivative)
 end
 
-function (contractor::GradientContractor{Newton})(region, mid_point = where_bisect)
-    contraction = _newton_contract(contractor.f, contractor.jacobian, region, mid_point)
-    if any(isempty.(contraction))
-        throw(DomainError(region))
-    end
-    return contraction
-end
-
-function (contractor::GradientContractor{Krawczyk})(region, mid_point = where_bisect)
-    contraction = _krawczyk_contract(contractor.f, contractor.jacobian, region, mid_point)
+function (contractor::GradientContractor{T})(region, mid_point = where_bisect) where T
+    contraction = _contract(
+        contractor.f,
+        contractor.jacobian,
+        region,
+        mid_point,
+        contractor.method
+    )
     if any(isempty.(contraction))
         throw(DomainError(region))
     end
