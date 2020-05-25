@@ -68,8 +68,9 @@ struct ThreadedRootSearch{B}
 end
 
 Base.IteratorSize(::Type{ThreadedRootSearch}) = Base.SizeUnknown()
-Base.eltype(::Type{ThreadedRootSearch{B}}) where {N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}} =
-    NTuple{2, ApplyVector{T, typeof(vcat), NTuple{N, V}}}
+Base.eltype(::Type{ThreadedRootSearch{B}}) where {
+    N, T, V, B <: NTuple{N, ThreadBuffer{T, V}}
+} = NTuple{2, ApplyVector{T, typeof(vcat), NTuple{N, V}}}
 
 """
     (search::ThreadedRootSearch)(region, generation, maxgeneration)
