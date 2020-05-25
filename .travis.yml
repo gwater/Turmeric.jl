@@ -27,6 +27,7 @@ env:
 jobs:
   allow_failures:
     - julia: nightly
+    - env: JULIA_NUM_THREADS=3
   include:
     - stage: "Documentation"
       julia: 1.4
