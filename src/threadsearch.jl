@@ -89,12 +89,14 @@ function (search::ThreadedRootSearch)(region, generation, maxgeneration)
         return true
     end
 
+    bisection = bisect(_region)
+
     if generation == maxgeneration
-        append!(buffer.indeterminate_regions, bisect(_region))
+        append!(buffer.indeterminate_regions, bisection)
         return false
     end
 
-    tasks = map(bisect(_region)) do i
+    tasks = map(bisection) do i
         Threads.@spawn search(i, generation + 1, maxgeneration)
     end
     # we cannot wait for results here because we need to free up the thread
@@ -152,7 +154,7 @@ end
 function iterate(search::ThreadedRootSearch, completed = false)
     completed && return nothing
     unfinished_regions = pop_unfinished!(search.buffers)
-    completed = search(unfinished_regions)
+    completed = unfinished_regions |> search
     return collect_regions(search.buffers), completed
 end
 
