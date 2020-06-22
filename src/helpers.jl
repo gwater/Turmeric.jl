@@ -1,4 +1,6 @@
 
+import Base.Iterators: Filter
+
 import IntervalArithmetic: mid, ±, isinterior, entireinterval, where_bisect,
     diam, bisect
 
@@ -26,3 +28,19 @@ strict_isinterior(a, b) = isinterior(a, b) && !any(a .=== entireinterval.(a))
 # these definitions break the concept of Vectors as sets of their elements
 # (rather than Cartesian boxes)
 _isempty(a) = any(isempty.(a))
+
+struct Sieve!{T, F}
+    criterion::F
+    siftings::T
+end
+
+function (sieve::Sieve!)(inputs)
+    return Filter(inputs) do input
+        if sieve.criterion(input)
+            push!(sieve.siftings, input)
+            return false
+        else
+            return true
+        end
+    end
+end
