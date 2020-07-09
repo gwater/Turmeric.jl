@@ -1,17 +1,15 @@
 
 using NumberIntervals
 using Turmeric
-import Turmeric: GradientContractor, ThreadBuffer, Newton, _isempty,
+import Turmeric: GradientContractor, Newton, _isempty,
     strict_isinterior, bisect, contains_root
-#include("selfclosing_channel.jl")
 
-contains_no_roots((region, image)) = _isempty(image) || !contains_root(image)
-const contains_roots = !contains_no_roots
+contains_roots((region, image)) = !_isempty(image) && contains_root(image)
 strictly_interior((region, contraction)) = strict_isinterior(contraction, region)
 append_contraction(contractor) = region -> (region, contractor(region))
 region_too_small(tol) = region_contraction -> diam(first(region_contraction)) < tol
 _intersect((region, contraction)) = region .∩ contraction
-_append(f) = x -> (x, f(x))
+_appended(f) = x -> (x, f(x))
 
 import ThreadPools: tmap
 import Base: map
@@ -50,20 +48,18 @@ append!(d::StoreFirst, xs) = foreach(x -> push!(d, x), xs)
 function search!(f, contractor, root_regions, indeterminate_regions, regions, tol, n)
     remaining_region_tuples =
         Iterators.take(regions, n) |>
-        _tmap(_append(contains_roots) ∘ _append(f)) |>
+        _tmap(_appended(contains_roots) ∘ _appended(f)) |>
         data -> filter(last, data) |>
-        _tmap(_append(strictly_interior) ∘ append_contraction(contractor) ∘ first ∘ first) |>
+        _tmap(_appended(strictly_interior) ∘ append_contraction(contractor) ∘ first ∘ first) |>
         sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
-        _tmap(_append(region_too_small(tol)) ∘ first) |>
+        _tmap(_appended(region_too_small(tol)) ∘ first) |>
         sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
         _tmap(bisect ∘ _intersect ∘ first)
-    length(remaining_region_tuples) == 0 && length(regions) <= n && return empty(regions)
     remaining_regions = vcat(
         first.(remaining_region_tuples),
         last.(remaining_region_tuples),
         (@view regions[n+1:end])
     )
-    @show length(remaining_regions)
     return remaining_regions
 end
 
@@ -74,6 +70,7 @@ function main()
     root_regions = typeof(region)[]
     regions = [region]
     while length(regions) > 0
+        @show length(regions)
         regions = search!(
             f,
             GradientContractor(sin ∘ inv, Newton(), region),
