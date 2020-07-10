@@ -21,7 +21,18 @@ function sieve!(f, discarded)
     end
 end
 
-_tmap(f::Function) = data -> tmap(f, data)
+using Base.Threads
+
+function mytmap(f, data)
+    Ts = Base.return_types(f, (eltype(data),))
+    out = Vector{first(Ts)}(undef, length(data))
+    @threads for i in 1:length(data)
+        out[i] = f(data[i])
+    end
+    return out
+end
+
+_tmap(f::Function) = data -> mytmap(f, data)
 _filter(f::Function) = data -> filter(f, data)
 _appended(f) = x -> (x, f(x))
 
@@ -44,7 +55,9 @@ function _setup_search(with_contains_root, with_contraction_and_isinterior, with
             sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
             _tmap(_appended(too_small(tolerance) ∘ first) ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
-            _tmap(bisect ∘ _intersect ∘ first)
+            _tmap(_appended(!_isempty) ∘ _intersect ∘ first) |>
+            _filter(last) |>
+            _tmap(bisect ∘ first)
         return vcat(
             first.(remaining_region_tuples),
             last.(remaining_region_tuples)
@@ -81,7 +94,7 @@ function _roots(
         max(num_tasks_hint, Threads.nthreads())
     while length(regions) > 0
         #@show length(regions)
-        @show regions
+        #=
         while length(regions) < n
             split_region_tuples = bisect.(regions)
             regions = vcat(
@@ -89,11 +102,11 @@ function _roots(
                 last.(split_region_tuples)
             )
         end
+        =#
         regions = vcat(
-            filter_contract_and_bisect(@view regions[1:n]),
+            filter_contract_and_bisect(@view regions[1:min(n, length(regions))]),
             @view regions[n + 1:end]
         )
-        sleep(2)
     end
     return root_regions, indeterminate_regions
 end
@@ -120,17 +133,19 @@ end
 
 # not clear how we can avoid the allocations – we want to be non mutating
 
+include("../examples/smiley_examples.jl")
+using .SmileyExample55
+
 function main()
-    f_lock = ReentrantLock()
-    function f(x)
-        lock(f_lock)
-        res = sin(x)
-        unlock(f_lock)
-        return res
-    end
     region = NumberInterval(-50pi, 50pi)
+    f(x) = sin(10sin(20sin(5x)))
     return roots(f, region)
 end
 
-@time res = main()[1]
+function main2()
+    region = NumberInterval.(SmileyExample55.region)
+    return roots(SmileyExample55.f, region, Krawczyk(), 1e-6)
+end
+
+@time res = main2()[1]
 @show length(res)
