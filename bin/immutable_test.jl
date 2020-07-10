@@ -21,21 +21,20 @@ function sieve!(f, discarded)
     end
 end
 
-_tmap(f::Function) = data -> map(f, data)
+_tmap(f::Function) = data -> tmap(f, data)
 _filter(f::Function) = data -> filter(f, data)
 _appended(f) = x -> (x, f(x))
 
 strict_contains_zero(image) = contains_root(image) && !_isempty(image)
-strict_contains_root(f) = strict_contains_zero ∘ f
+strictly_contains_root(f) = strict_contains_zero ∘ f
 strictly_interior((region, contraction)) = strict_isinterior(contraction, region)
 too_small(tol) = <(tol) ∘ diam
-_intersect((region, contraction)) = region .∩ contraction
+_intersect((region, contraction)::Tuple{T, T}) where T <: Number =
+    region ∩ contraction
+_intersect((region, contraction)::Tuple{T, T}) where T <: AbstractArray =
+    region .∩ contraction
 
-function setup_search(f, contractor, root_regions, indeterminate_regions, tolerance)
-    with_contains_root = _appended(strict_contains_root(f))
-    with_contraction_and_isinterior =
-        _appended(strictly_interior) ∘ _appended(contractor)
-    with_too_small = _appended(too_small(tolerance) ∘ first)
+function _setup_search(with_contains_root, with_contraction_and_isinterior, with_too_small, root_regions, indeterminate_regions, tolerance)
     return function filter_contract_and_bisect(regions)
         remaining_region_tuples =
             regions |>
@@ -43,7 +42,7 @@ function setup_search(f, contractor, root_regions, indeterminate_regions, tolera
             _filter(last) |>
             _tmap(with_contraction_and_isinterior ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
-            _tmap(with_too_small ∘ first) |>
+            _tmap(_appended(too_small(tolerance) ∘ first) ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
             _tmap(bisect ∘ _intersect ∘ first)
         return vcat(
@@ -53,12 +52,20 @@ function setup_search(f, contractor, root_regions, indeterminate_regions, tolera
     end
 end
 
+function setup_search(f, contractor, root_regions, indeterminate_regions, tolerance)
+    with_contains_root = _appended(strictly_contains_root(f))
+    with_contraction_and_isinterior =
+        _appended(strictly_interior) ∘ _appended(contractor)
+    with_too_small = _appended(too_small(tolerance) ∘ first)
+    return _setup_search(with_contains_root, with_contraction_and_isinterior, with_too_small, root_regions, indeterminate_regions, tolerance)
+end
+
 function _roots(
     f,
     region,
     contractor,
     tolerance,
-    num_concurrent_tasks
+    num_tasks_hint
 )
     indeterminate_regions = typeof(region)[]
     root_regions = typeof(region)[]
@@ -70,13 +77,23 @@ function _roots(
         indeterminate_regions,
         tolerance
     )
-    n = isnothing(num_concurrent_tasks) ? 4Threads.nthreads() : num_concurrent_tasks
+    n = isnothing(num_tasks_hint) ? 4Threads.nthreads() :
+        max(num_tasks_hint, Threads.nthreads())
     while length(regions) > 0
-        @show length(regions)
+        #@show length(regions)
+        @show regions
+        while length(regions) < n
+            split_region_tuples = bisect.(regions)
+            regions = vcat(
+                first.(split_region_tuples),
+                last.(split_region_tuples)
+            )
+        end
         regions = vcat(
-            filter_contract_and_bisect(Iterators.take(regions, n) |> collect),
+            filter_contract_and_bisect(@view regions[1:n]),
             @view regions[n + 1:end]
         )
+        sleep(2)
     end
     return root_regions, indeterminate_regions
 end
@@ -86,10 +103,10 @@ function roots(
     region,
     method::Union{Krawczyk, Newton} = default_contractor,
     tolerance = default_tolerance,
-    num_concurrent_tasks = nothing
+    num_tasks_hint = nothing
 )
     contractor = GradientContractor(f, method, region)
-    return _roots(f, region, contractor, tolerance, num_concurrent_tasks)
+    return _roots(f, region, contractor, tolerance, num_tasks_hint)
 end
 
 # this method necessarily allocates memory in between steps
@@ -104,8 +121,14 @@ end
 # not clear how we can avoid the allocations – we want to be non mutating
 
 function main()
-    f = sin ∘ inv
-    region = NumberInterval(-0.5pi, 0.5pi)
+    f_lock = ReentrantLock()
+    function f(x)
+        lock(f_lock)
+        res = sin(x)
+        unlock(f_lock)
+        return res
+    end
+    region = NumberInterval(-50pi, 50pi)
     return roots(f, region)
 end
 
