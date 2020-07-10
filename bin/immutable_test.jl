@@ -6,7 +6,6 @@ import Turmeric: GradientContractor, Newton, _isempty,
 
 contains_roots((region, image)) = !_isempty(image) && contains_root(image)
 strictly_interior((region, contraction)) = strict_isinterior(contraction, region)
-append_contraction(contractor) = region -> (region, contractor(region))
 region_too_small(tol) = region_contraction -> diam(first(region_contraction)) < tol
 _intersect((region, contraction)) = region .∩ contraction
 _appended(f) = x -> (x, f(x))
@@ -51,7 +50,7 @@ function setup_search(f, contractor, root_regions, indeterminate_regions, tolera
             regions |>
             _tmap(_appended(contains_roots) ∘ _appended(f)) |>
             data -> filter(last, data) |>
-            _tmap(_appended(strictly_interior) ∘ append_contraction(contractor) ∘ first ∘ first) |>
+            _tmap(_appended(strictly_interior) ∘ _appended(contractor) ∘ first ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
             _tmap(_appended(region_too_small(tolerance)) ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
