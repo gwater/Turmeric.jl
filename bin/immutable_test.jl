@@ -32,14 +32,18 @@ too_small(tol) = <(tol) ∘ diam
 _intersect((region, contraction)) = region .∩ contraction
 
 function setup_search(f, contractor, root_regions, indeterminate_regions, tolerance)
+    with_contains_root = _appended(strict_contains_root(f))
+    with_contraction_and_isinterior =
+        _appended(strictly_interior) ∘ _appended(contractor)
+    with_too_small = _appended(too_small(tolerance) ∘ first)
     return function filter_contract_and_bisect(regions)
         remaining_region_tuples =
             regions |>
-            _tmap(_appended(strict_contains_root(f))) |>
+            _tmap(with_contains_root) |>
             _filter(last) |>
-            _tmap(_appended(strictly_interior) ∘ _appended(contractor) ∘ first) |>
+            _tmap(with_contraction_and_isinterior ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
-            _tmap(_appended(too_small(tolerance) ∘ first) ∘ first) |>
+            _tmap(with_too_small ∘ first) |>
             sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
             _tmap(bisect ∘ _intersect ∘ first)
         return vcat(
