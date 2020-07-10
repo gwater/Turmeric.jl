@@ -59,10 +59,10 @@ the explicitely supplied function `jacobian(region)` or a jacobian method for
 
 Calling instances of `GradientContractor` returns a contraction of `region`.
 """
-struct GradientContractor{T}
-    f
+struct GradientContractor{T, F, J}
+    f::F
     method::T
-    jacobian
+    jacobian::J
 end
 
 function GradientContractor(f, method, ::R) where R <: AbstractVector
