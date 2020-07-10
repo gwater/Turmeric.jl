@@ -2,7 +2,7 @@
 using NumberIntervals
 using Turmeric
 import Turmeric: GradientContractor, Newton, _isempty,
-    strict_isinterior, bisect, contains_root
+    strict_isinterior, bisect, contains_root, default_contractor, default_tolerance
 
 contains_roots((region, image)) = !_isempty(image) && contains_root(image)
 strictly_interior((region, contraction)) = strict_isinterior(contraction, region)
@@ -45,43 +45,69 @@ end
 push!(d::StoreFirst, x) = StoreFirst(push!(d.output, first(x)))
 append!(d::StoreFirst, xs) = foreach(x -> push!(d, x), xs)
 
-function search!(f, contractor, root_regions, indeterminate_regions, regions, tol, n)
-    remaining_region_tuples =
-        Iterators.take(regions, n) |>
-        _tmap(_appended(contains_roots) ∘ _appended(f)) |>
-        data -> filter(last, data) |>
-        _tmap(_appended(strictly_interior) ∘ append_contraction(contractor) ∘ first ∘ first) |>
-        sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
-        _tmap(_appended(region_too_small(tol)) ∘ first) |>
-        sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
-        _tmap(bisect ∘ _intersect ∘ first)
-    remaining_regions = vcat(
-        first.(remaining_region_tuples),
-        last.(remaining_region_tuples),
-        (@view regions[n+1:end])
-    )
-    return remaining_regions
+function setup_search(f, contractor, root_regions, indeterminate_regions, tolerance)
+    return function filter_contract_and_bisect(regions)
+        remaining_region_tuples =
+            regions |>
+            _tmap(_appended(contains_roots) ∘ _appended(f)) |>
+            data -> filter(last, data) |>
+            _tmap(_appended(strictly_interior) ∘ append_contraction(contractor) ∘ first ∘ first) |>
+            sieve!(last, StoreFirst(StoreFirst(root_regions))) |>
+            _tmap(_appended(region_too_small(tolerance)) ∘ first) |>
+            sieve!(last, StoreFirst(StoreFirst(indeterminate_regions))) |>
+            _tmap(bisect ∘ _intersect ∘ first)
+        return vcat(
+            first.(remaining_region_tuples),
+            last.(remaining_region_tuples)
+        )
+    end
 end
 
-function main()
-    f = sin ∘ inv
-    region = NumberInterval(-0.5pi, 0.5pi)
+function _roots(
+    f,
+    region,
+    contractor,
+    tolerance,
+    num_concurrent_tasks
+)
     indeterminate_regions = typeof(region)[]
     root_regions = typeof(region)[]
     regions = [region]
+    filter_contract_and_bisect = setup_search(
+        f,
+        contractor,
+        root_regions,
+        indeterminate_regions,
+        tolerance
+    )
+    n = isnothing(num_concurrent_tasks) ? 4Threads.nthreads() : num_concurrent_tasks
     while length(regions) > 0
         @show length(regions)
-        regions = search!(
-            f,
-            GradientContractor(sin ∘ inv, Newton(), region),
-            root_regions,
-            indeterminate_regions,
-            regions,
-            1e-2,
-            4Threads.nthreads()
+        regions = vcat(
+            filter_contract_and_bisect(Iterators.take(regions, n)),
+            @view regions[n + 1:end]
         )
     end
     return root_regions, indeterminate_regions
 end
 
-@show main()[1]
+function roots(
+    f,
+    region,
+    method::Union{Krawczyk, Newton} = default_contractor,
+    tolerance = default_tolerance,
+    num_concurrent_tasks = nothing
+)
+    contractor = GradientContractor(f, method, region)
+    return _roots(f, region, contractor, tolerance, num_concurrent_tasks)
+end
+
+
+function main()
+    f = sin ∘ inv
+    region = NumberInterval(-0.5pi, 0.5pi)
+    return roots(f, region)
+end
+
+@time res = main()[1]
+@show res
