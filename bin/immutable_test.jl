@@ -5,15 +5,23 @@ using Turmeric
 import Turmeric: GradientContractor, Newton, _isempty,
     strict_isinterior, bisect, contains_root, default_contractor, default_tolerance
 
-import Base: push!, append!
+import Base: push!, append!, IteratorSize, iterate, eltype
 
 struct StoreApplied{T, F}
     output::T
     f::F
 end
 
-push!(d::StoreApplied, x) = StoreApplied(push!(d.output, d.f(x)), d.f)
-append!(d::StoreApplied, xs) = foreach(x -> push!(d, x), xs)
+function push!(d::StoreApplied, x) 
+    push!(d.output, d.f(x))
+    return d
+end
+
+function append!(d::StoreApplied, xs)
+    sizehint!(d.output, length(d.output) + length(xs))
+    foreach(x -> push!(d, x), xs)
+    return d
+end
 
 function sieve!(f, discarded)
     return function ff(data)
@@ -71,13 +79,16 @@ function setup_search(f, contractor, root_regions, indeterminate_regions, tolera
     end
 end
 
-function _roots(
-    f,
-    region,
-    contractor,
-    tolerance,
-    num_tasks_hint
-)
+struct ThreadedRootSearch{T, S, F}
+    indeterminate_regions::Vector{T}
+    root_regions::Vector{T}
+    regions::Vector{T}
+    tolerance::S
+    n_tasks::Int
+    filter_contract_and_bisect::F
+end
+
+function ThreadedRootSearch(f, region, contractor, tolerance, num_tasks_hint)
     indeterminate_regions = typeof(region)[]
     root_regions = typeof(region)[]
     regions = [region]
@@ -97,15 +108,39 @@ function _roots(
             last.(split_region_tuples)
         )
     end
-    # TODO use fold() method here
-    while length(regions) > 0
-        @show length(regions)
-        regions = vcat(
-            filter_contract_and_bisect(Iterators.take(regions, n_tasks) |> collect),
-            @view regions[n_tasks + 1:end]
-        )
+    return ThreadedRootSearch(
+        indeterminate_regions,
+        root_regions,
+        regions,
+        tolerance,
+        n_tasks,
+        filter_contract_and_bisect
+    )
+end
+
+IteratorSize(::Type{T}) where T <: ThreadedRootSearch =
+    Base.SizeUnknown()
+
+eltype(::Type{ThreadedRootSearch{T}}) where T = Tuple{Vector{T}, Vector{T}}    
+
+function iterate(search::ThreadedRootSearch, state=nothing)
+    todo_regions = collect(Iterators.take(search.regions, search.n_tasks))
+    new_regions = vcat(
+        search.filter_contract_and_bisect(todo_regions),
+        @view search.regions[search.n_tasks + 1:end]
+    )
+    length(new_regions) == 0 && return nothing
+    empty!(search.regions)
+    append!(search.regions, new_regions)
+    return (search.root_regions, search.indeterminate_regions),
+        isnothing(state) ? 1 : state + 1
+end
+
+function lastitem(search::ThreadedRootSearch)
+    foreach(search) do i
+        @info "root search" n_regions=length(search.regions)
     end
-    return root_regions, indeterminate_regions
+    return search.root_regions, search.indeterminate_regions
 end
 
 function roots(
@@ -116,7 +151,9 @@ function roots(
     num_tasks_hint = nothing
 )
     contractor = GradientContractor(f, method, region)
-    return _roots(f, region, contractor, tolerance, num_tasks_hint)
+    search =
+        ThreadedRootSearch(f, region, contractor, tolerance, num_tasks_hint)
+    return lastitem(search)
 end
 
 # this method necessarily allocates memory in between steps
